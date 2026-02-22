@@ -2,10 +2,49 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Wuxia AA RPG - ES6 Modular Build</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>武俠 AA RPG - 江湖夜雨</title>
     <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
+
+    <div id="game-master-container">
+        
+        <div id="area-map" class="panel">
+            <canvas id="map-canvas"></canvas>
+        </div>
+
+        <div id="area-avatar" class="panel">
+            <div class="avatar-title">【少俠】</div>
+            <div class="avatar-aa-box">
+                /・　・ヽ<br>| ≡[鎧]≡ |
+            </div>
+            <div class="avatar-stats">氣血: <span id="ui-hp" class="color-hp">1000/1000</span></div>
+            <div class="avatar-sub-stats">等級: <span id="ui-lv" class="color-lv">1</span> | 經驗: <span id="ui-exp" class="color-exp">0</span></div>
+        </div>
+
+        <div id="area-log" class="panel">
+            <div class="panel-title">📜 江湖紀事</div>
+            <div id="log-content"></div>
+        </div>
+
+        <div id="area-sys" class="panel">
+            <div class="sys-tabs" id="sys-tabs-container">
+                <button class="tab-btn active" data-tab="status">狀態</button>
+                <button class="tab-btn" data-tab="equip">裝備</button>
+                <button class="tab-btn" data-tab="item">道具</button>
+                <button class="tab-btn" data-tab="skill">武功</button>
+                <button class="tab-btn" data-tab="train">修練</button>
+            </div>
+            <div id="sys-content"></div>
+        </div>
+
+        <canvas id="vfx-layer"></canvas>
+
+        <div id="floating-windows-container"></div>
+
+    </div>
+
     <script type="module" src="./js/main.js"></script>
 </body>
 </html>
