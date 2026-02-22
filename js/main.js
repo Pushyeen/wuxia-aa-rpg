@@ -8,8 +8,8 @@ import { EventEngine } from './systems/events.js';
 import { CombatSystem } from './systems/combat.js';
 import { Logger } from './ui/logger.js';
 import { SysPanel } from './ui/sys_panel.js';
+import { AvatarUI } from './ui/avatar.js'; // 檢查這行大小寫
 import { MapDB } from './data/db_maps.js';
-import { AvatarUI } from './ui/avatar.js';
 
 let mapEngine, vfxEngine;
 
