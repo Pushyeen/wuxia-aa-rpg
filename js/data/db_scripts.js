@@ -8,10 +8,11 @@ export const DB_SCRIPTS = {
         { type: "dialog", speaker: "系統", text: "天命已定！按 WASD 移動。尋找地圖上的【匠】領取裝備，再挑戰【惡】、【徒】、【護】。" }
     ],
 
-    // 鐵匠給予新手裝備與開放商店 (已移除發放天書)
+    // 鐵匠給予新手裝備、傷藥與開放商店
     'evt_npc_blacksmith': [
         { type: "dialog", speaker: "好心鐵匠", text: "少俠！前方江湖險惡，讓我來助你一臂之力吧！" },
-        { type: "dialog", speaker: "好心鐵匠", text: "這裡有我畢生打造的兵器與防具，你需要什麼儘管拿去！" },
+        { type: "dialog", speaker: "好心鐵匠", text: "金創藥記得帶在身上，刀劍無眼，受傷了隨時打開【行囊】使用！" },
+        { type: "dialog", speaker: "好心鐵匠", text: "這裡還有我畢生打造的兵器防具，你需要什麼儘管拿去！" },
         { type: "blacksmith_shop" }
     ],
     

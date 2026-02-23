@@ -129,22 +129,31 @@ export const EventEngine = {
         });
     },
 
+// js/systems/events.js 中的 showBlacksmithShop 函式替換
+ // js/systems/events.js 中的 showBlacksmithShop 函式
     showBlacksmithShop() {
         return new Promise(resolve => {
             let html = `<div style="max-height: 350px; overflow-y: auto; margin-bottom: 15px; padding-right: 10px;">`;
-            html += `<div style="color:#ffff55; margin-bottom:10px;">請選擇需要的裝備（免費無限供應）：</div>`;
+            html += `<div style="color:#ffff55; margin-bottom:10px;">請選擇需要的物資（免費無限供應）：</div>`;
             
             for (let key in DB_ITEMS) {
                 let item = DB_ITEMS[key];
-                if (item.type === 'weapon' || item.type === 'armor') {
-                    let typeName = item.type === 'weapon' ? '武器' : '防具';
+                
+                // 【修改】：允許顯示武器、防具，以及「非天書」的消耗品（如 potion_hp）
+                if (item.type === 'weapon' || item.type === 'armor' || (item.type === 'consumable' && !key.includes('book_all'))) {
+                    
+                    let typeName = '道具';
+                    if (item.type === 'weapon') typeName = '武器';
+                    else if (item.type === 'armor') typeName = '防具';
+                    else if (item.type === 'consumable') typeName = '丹藥';
+
                     html += `<div class="list-item" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid #333; padding-bottom:5px;">
                                 <div style="flex:1;">
                                     <span style="color:#55ffff;">【${typeName}】</span> ${item.name} <br>
                                     <span style="font-size:12px;color:#888;">${item.desc}</span>
                                 </div>
                                 <div>
-                                    <button class="sys-btn action-get-item" data-id="${key}" style="border-color:#55ff55; color:#55ff55; min-width:60px;">領取</button>
+                                    <button class="sys-btn action-get-item" data-id="${key}" data-type="${item.type}" style="border-color:#55ff55; color:#55ff55; min-width:60px;">領取</button>
                                 </div>
                              </div>`;
                 }
@@ -157,13 +166,20 @@ export const EventEngine = {
             win.querySelectorAll('.action-get-item').forEach(btn => {
                 btn.onclick = () => {
                     let itemId = btn.getAttribute('data-id');
+                    let itemType = btn.getAttribute('data-type');
+                    
                     GameState.player.inventory.push(itemId);
                     if (this.logger) this.logger.add(`從鐵匠處獲得了 ${DB_ITEMS[itemId].name}！`, "story-msg");
                     if (this.ui) this.ui.render();
                     
-                    btn.innerText = "已領取";
-                    btn.style.color = "#888";
-                    btn.style.borderColor = "#555";
+                    // 【優化】：裝備領取後變灰，消耗品（丹藥）則提示可以再次領取
+                    if (itemType === 'consumable') {
+                        btn.innerText = "再次領取";
+                    } else {
+                        btn.innerText = "已領取";
+                        btn.style.color = "#888";
+                        btn.style.borderColor = "#555";
+                    }
                 };
             });
             
@@ -173,7 +189,7 @@ export const EventEngine = {
             };
         });
     },
-
+    
     // 【新增】：擲骰視窗邏輯
     showRollStatsWindow() {
         return new Promise(resolve => {
