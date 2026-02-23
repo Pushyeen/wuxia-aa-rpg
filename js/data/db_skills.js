@@ -1,6 +1,14 @@
 // js/data/db_skills.js
 
 export const DB_SKILLS = {
+
+    // 【新增】：傳說中的野球拳
+    's_yq_punch': {
+        name: "野球拳", type: "phys", power: 25, comboCost: 20, tags: ["鈍"], vfx: "strike",
+        msg: "無招勝有招，看似瞎比劃實則威力無窮！",
+        hits: 1
+    },
+    
     // ❄️ 凜冬霸劍流
     "ice_1": { name: "寒霜劍氣", tags: ["寒", "銳"], type: "qi", power: 60, comboCost: 45, vfx: "wind_sword", msg: "賦予 1 層寒氣。", onHit: (ctx) => ctx.addTag(ctx.target, 'ice', 1) },
     "ice_2": { name: "傲雪凌霜", tags: ["Aura"], type: "qi", power: 0, comboCost: 50, vfx: "ice_shatter", msg: "獲得冰盾(受擊反傷寒氣)。", onHit: (ctx) => ctx.addAura(ctx.attacker, '冰盾', 2) },

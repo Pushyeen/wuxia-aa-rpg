@@ -1,6 +1,38 @@
 // js/data/db_items.js
-
+import { DB_SKILLS } from './db_skills.js';
+import { DB_INTERNAL } from './db_internal.js';
 export const DB_ITEMS = {
+// 【無字天書·武學篇】
+    'book_all_skills': {
+        name: "【無字天書·武學篇】", type: "consumable", desc: "記載了世間所有武功的奇書。使用後學會所有外功武學。",
+        action: (p, logger) => {
+            let count = 0;
+            for (let key in DB_SKILLS) {
+                // 排除敵人的專屬技能，並檢查是否已學會
+                if (!key.startsWith('s_enemy') && !p.skills.includes(key)) {
+                    p.skills.push(key);
+                    count++;
+                }
+            }
+            if (logger) logger.add(`✅ 翻閱無字天書，瞬間領悟了 ${count} 種武學招式！`, "story-msg");
+        }
+    },
+    
+    // 【無字天書·內功篇】
+    'book_all_internal': {
+        name: "【無字天書·內功篇】", type: "consumable", desc: "記載了世間所有內功的奇書。使用後解鎖所有內功心法。",
+        action: (p, logger) => {
+            let count = 0;
+            for (let key in DB_INTERNAL) {
+                // 如果進度物件中沒有這個內功，就將其初始化為 0 重境界
+                if (p.internal.progress[key] === undefined) {
+                    p.internal.progress[key] = 0; 
+                    count++;
+                }
+            }
+            if (logger) logger.add(`✅ 翻閱無字天書，瞬間掌握了 ${count} 門內功心法！`, "story-msg");
+        }
+    },
     // === 消耗品 ===
     "i_potion": { name: "金創藥", type: "consumable", desc: "恢復 1000 氣血", action: (p, l) => { p.hp = Math.min(p.maxHp, p.hp + 1000); if(l) l.add("使用金創藥，恢復 1000 氣血。", "sys-msg"); } },
     "i_pill": { name: "大還丹", type: "consumable", desc: "恢復所有氣血與連擊值", action: (p, l) => { p.hp = p.maxHp; p.currentCombo = 999; if(l) l.add("服下大還丹，真氣充盈，氣血與連擊極限全滿！", "story-msg"); } },

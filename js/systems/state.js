@@ -9,23 +9,22 @@ export const GameState = {
         x: 5, y: 5, lv: 1, exp: 9999, hp: 3000, maxHp: 3000, 
         poise: 100, maxPoise: 100, atb: 0,
         combatMode: "auto", 
-        stats: { brawn: 50, physique: 50, qiCap: 50, qiPot: 50, agi: 50, dex: 50, per: 50, comp: 50, luck: 50 },
-        inventory: [
-            "i_potion", "i_pill", "i_lotus", 
-            "w_wood", "w_iron", "w_heavy", "w_fan", "w_spear",
-            "a_cloth", "a_leather", "a_iron", "a_silk", "a_gold"
-        ], 
-        equips: { weapon: null, armor: null },
-        skills: [
-            "ice_1", "ice_2", "ice_3", "ice_4", "ice_5", "ice_6",
-            "fire_1", "fire_2", "fire_3", "fire_4", "fire_5", "fire_6",
-            "silk_1", "silk_2", "silk_3", "silk_4", "silk_5", "silk_6",
-            "taiji_1", "taiji_2", "taiji_3", "taiji_4", "taiji_5", "taiji_6",
-            "mech_1", "mech_2", "mech_3", "mech_4", "mech_5", "mech_6"
-        ], 
-        activeSkills: ["ice_1", "fire_2", "taiji_4", "mech_1"], 
-        internal: { active: "art_yang", progress: { "art_yang": 1, "art_yin": 0, "art_taiji": 0 }, status: { poisoned: false, injured: false } },
-        aura: {}, currentCombo: 0, tags: {}
+        stats: { brawn: 10, physique: 10, qiCap: 10, qiPot: 10, agi: 10, dex: 10, per: 10, comp: 10, luck: 10 },
+        equips: { weapon: null, armor: null, accessory: null },
+        
+        // 【修改】：初始武學只有野球拳
+        skills: ["s_yq_punch"],
+        activeSkills: ["s_yq_punch"],
+        
+        // 【修改】：預設不包含任何內功，等吃到道具才解鎖
+        internal: {
+            active: null,
+            progress: {} 
+        },
+        
+        // 【修改】：在背包塞入兩本天書
+        inventory: ["potion_hp", "book_all_skills", "book_all_internal"],
+        aura: {}, tags: {}
     },
     env: { needles: 0, fire: 0, gears: 0, taichi: 0, turret: 0 }
 };
