@@ -1,22 +1,18 @@
 // js/ui/sys_panel.js
-import { GameState } from '../systems/state.js';
+import { GameState, StatEngine } from '../systems/state.js';
 import { DB_ITEMS } from '../data/db_items.js';
 import { DB_SKILLS } from '../data/db_skills.js';
 import { AvatarUI } from './avatar.js'; 
 import { DB_INTERNAL } from '../data/db_internal.js';
-import { MeridianUI } from './meridian_ui.js'; // 引入經脈 UI
+import { MeridianUI } from './meridian_ui.js'; 
 
 export const SysPanel = {
     currentTab: 'status',
-    el: null,
-    vfx: null,
-    logger: null,
+    el: null, vfx: null, logger: null,
 
     init(deps) {
         this.el = document.getElementById('sys-content');
-        this.vfx = deps.vfx;
-        this.logger = deps.logger;
-
+        this.vfx = deps.vfx; this.logger = deps.logger;
         const tabs = document.querySelectorAll('.tab-btn');
         tabs.forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -29,55 +25,13 @@ export const SysPanel = {
     },
 
     updateStats() {
-        let p = GameState.player;
-        p.maxHp = p.baseMaxHp; 
-        p.atk = p.baseAtk; 
-        p.def = p.baseDef; 
-        p.agi = p.baseAgi;
-        
-        // 裝備加成
-        Object.values(p.equips).forEach(eqId => {
-            if (!eqId) return;
-            let item = DB_ITEMS[eqId];
-            if (item) {
-                if(item.atk) p.atk += item.atk; 
-                if(item.def) p.def += item.def; 
-                if(item.agi) p.agi += item.agi; 
-                if(item.maxHp) p.maxHp += item.maxHp;
-            }
-        });
-
-        // 內功經脈加成
-        if (p.internal && p.internal.active) {
-            let activeArtId = p.internal.active;
-            let art = DB_INTERNAL[activeArtId];
-            let nodesUnlocked = p.internal.progress[activeArtId] || 0;
-            if (art && art.buff) {
-                if(art.buff.hp) p.maxHp += art.buff.hp * nodesUnlocked;
-                if(art.buff.atk) p.atk += art.buff.atk * nodesUnlocked;
-                if(art.buff.def) p.def += art.buff.def * nodesUnlocked;
-                if(art.buff.agi) p.agi += art.buff.agi * nodesUnlocked;
-            }
-            
-            // 異常狀態懲罰
-            if (p.internal.status.poisoned) {
-                p.atk = Math.floor(p.atk * 0.7);
-                p.def = Math.floor(p.def * 0.7);
-            }
-            if (p.internal.status.injured) {
-                p.maxHp = Math.floor(p.maxHp * 0.5);
-                p.agi = Math.floor(p.agi * 0.5);
-            }
-        }
-
-        if (p.hp > p.maxHp) p.hp = p.maxHp;
-
+        StatEngine.updateMaxHp(GameState.player);
         const hpEl = document.getElementById('ui-hp');
         const lvEl = document.getElementById('ui-lv');
         const expEl = document.getElementById('ui-exp');
-        if(hpEl) hpEl.innerText = `${p.hp}/${p.maxHp}`;
-        if(lvEl) lvEl.innerText = p.lv;
-        if(expEl) expEl.innerText = p.exp;
+        if(hpEl) hpEl.innerText = `${GameState.player.hp}/${GameState.player.maxHp}`;
+        if(lvEl) lvEl.innerText = GameState.player.lv;
+        if(expEl) expEl.innerText = GameState.player.exp;
     },
 
     render() {
@@ -86,57 +40,85 @@ export const SysPanel = {
         let p = GameState.player;
         
         if (this.currentTab === 'status') {
-            html = `<div style="line-height:2.2; font-size:16px;">
-                <div>【氣血】 <span style="color:#ff5555">${p.hp} / ${p.maxHp}</span></div>
-                <div>【攻擊】 <span style="color:#ffffff">${p.atk}</span></div>
-                <div>【防禦】 <span style="color:#ffffff">${p.def}</span></div>
-                <div>【輕功】 <span style="color:#ffffff">${p.agi}</span></div>
-                <hr style="border: 0; border-bottom: 1px dotted #555; margin:15px 0;">
-                <div style="color:#aaaaaa; font-size:14px;">※敏捷(輕功)決定戰鬥時的出招頻率。</div>
-                <div style="color:#aaaaaa; font-size:14px;">※目前修為：<span style="color:#55ffff">${p.exp}</span> 點。</div>
+            let d = StatEngine.getDerived(p);
+            let s = p.stats;
+            html = `<div style="line-height:1.8; font-size:14px; overflow-y:auto; height:100%;">
+                <div class="color-hp" style="font-size:16px;">【氣血】 ${p.hp} / ${p.maxHp}</div>
+                <hr style="border: 0; border-bottom: 1px dotted #555; margin:8px 0;">
+                <div style="color:#ffff55; font-weight:bold;">＜九大基礎屬性＞</div>
+                <div style="display:flex; flex-wrap:wrap; color:#aaa; margin-bottom:10px;">
+                    <div style="width:50%;">臂力: <span style="color:#fff">${s.brawn}</span></div>
+                    <div style="width:50%;">根骨: <span style="color:#fff">${s.physique}</span></div>
+                    <div style="width:50%;">內息: <span style="color:#fff">${s.qiCap}</span></div>
+                    <div style="width:50%;">真元: <span style="color:#fff">${s.qiPot}</span></div>
+                    <div style="width:50%;">身法: <span style="color:#fff">${s.agi}</span></div>
+                    <div style="width:50%;">靈巧: <span style="color:#fff">${s.dex}</span></div>
+                    <div style="width:50%;">洞察: <span style="color:#fff">${s.per}</span></div>
+                    <div style="width:50%;">悟性: <span style="color:#fff">${s.comp}</span></div>
+                    <div style="width:50%;">福緣: <span style="color:#fff">${s.luck}</span></div>
+                </div>
+                <div style="color:#ffff55; font-weight:bold;">＜戰鬥延伸面板＞</div>
+                <div style="display:flex; flex-wrap:wrap; color:#aaa;">
+                    <div style="width:50%;">外功攻擊: <span style="color:#55ffff">${d.pAtk}</span></div>
+                    <div style="width:50%;">內功威力: <span style="color:#55ffff">${d.qAtk}</span></div>
+                    <div style="width:50%;">命中/閃避: <span style="color:#55ffff">${d.hit}/${d.dodge}</span></div>
+                    <div style="width:50%;">爆擊率: <span style="color:#55ffff">${d.critChance}%</span></div>
+                    <div style="width:50%;">爆傷倍率: <span style="color:#55ffff">${(d.critMult*100).toFixed(0)}%</span></div>
+                    <div style="width:50%;">外門硬功: <span style="color:#55ffff">${d.fixDef}</span></div>
+                    <div style="width:50%;">護體真氣: <span style="color:#55ffff">${d.pctDef}%</span></div>
+                    <div style="width:100%;">極限連擊值: <span style="color:#55ffff">${d.comboMax}</span></div>
+                </div>
             </div>`;
         } 
         else if (this.currentTab === 'equip') {
             html += `<div style="color:#ffff55; margin-bottom:10px; font-weight:bold;">＜目前裝備＞</div>`;
             ['weapon', 'armor'].forEach(slot => {
                 let eqId = p.equips[slot];
-                let name = (eqId && DB_ITEMS[eqId]) ? DB_ITEMS[eqId].name : "空";
-                html += `<div class="list-item"><span>【${slot === 'weapon' ? '武器' : '防具'}】 ${name}</span>`;
+                let item = eqId ? DB_ITEMS[eqId] : null;
+                let name = item ? item.name : "空";
+                let desc = item ? `<span style="font-size:12px;color:#888">(${item.desc})</span>` : "";
+                html += `<div class="list-item"><span>【${slot === 'weapon' ? '武器' : '防具'}】 ${name} <br>${desc}</span>`;
                 if(eqId) html += `<button class="sys-btn action-unequip" data-slot="${slot}">卸下</button>`;
                 html += `</div>`;
             });
 
             html += `<div style="color:#aaaaaa; margin:15px 0 10px 0; font-weight:bold;">＜背包裝備＞</div>`;
+            let hasEquip = false;
             p.inventory.forEach((itemId, idx) => {
                 let item = DB_ITEMS[itemId];
                 if (item && (item.type === 'weapon' || item.type === 'armor')) {
-                    html += `<div class="list-item"><span>${item.name} <span style="font-size:12px;color:#888">(${item.desc})</span></span>
+                    hasEquip = true;
+                    html += `<div class="list-item"><span>${item.name} <br><span style="font-size:12px;color:#888">(${item.desc})</span></span>
                              <button class="sys-btn action-equip" data-idx="${idx}">裝備</button></div>`;
                 }
             });
+            if (!hasEquip) html += "<div style='color:#888;'>背包裡沒有可用裝備。</div>";
         }
         else if (this.currentTab === 'item') {
+            let hasItem = false;
             p.inventory.forEach((itemId, idx) => {
                 let item = DB_ITEMS[itemId];
                 if (item && item.type === 'consumable') {
-                    html += `<div class="list-item"><span>${item.name} <span style="font-size:12px;color:#888">(${item.desc})</span></span>
+                    hasItem = true;
+                    html += `<div class="list-item"><span>${item.name} <br><span style="font-size:12px;color:#888">(${item.desc})</span></span>
                              <button class="sys-btn action-use" data-idx="${idx}">使用</button></div>`;
                 }
             });
-            if (html === '') html = "<div style='color:#888;'>背包裡沒有可用道具。</div>";
+            if (!hasItem) html += "<div style='color:#888;'>背包裡沒有可用道具。</div>";
         }
         else if (this.currentTab === 'skill') {
-            html += `<div style="color:#ffff55; margin-bottom:5px; font-weight:bold;">＜已學武功＞ (標記 [參戰] 生效)</div>`;
-            html += `<div style="color:#888; font-size:12px; margin-bottom:15px;">※戰鬥時，將從參戰的武功中隨機施展。</div>`;
-            
+            html += `<div style="color:#ffff55; margin-bottom:5px; font-weight:bold;">＜配置參戰快捷武學＞</div>`;
             p.skills.forEach(skillId => {
                 let skill = DB_SKILLS[skillId];
                 if (!skill) return;
-                
                 let isActive = p.activeSkills.includes(skillId);
-                let hitText = skill.hits ? `${skill.hits}連擊` : `隨機連擊`;
                 let bgStyle = isActive ? 'background:#000044;' : 'transparent';
                 
+                let tagsHtml = skill.tags.map(t => {
+                    let cls = ''; if(t==='寒')cls='ice'; else if(t==='炎')cls='fire'; else if(t==='鈍')cls='blunt'; else if(t==='風')cls='wind'; else if(t==='牽引')cls='pull'; else if(t==='佈置')cls='trap'; else if(t==='絲線')cls='silk'; else if(t==='柔')cls='soft'; else if(t==='Aura')cls='aura';
+                    return `<span class="tag ${cls}">${t}</span>`;
+                }).join('');
+
                 html += `<div class="list-item" style="flex-wrap:wrap; ${bgStyle}">
                             <div style="width: 50%; color:${isActive ? '#55ffff' : '#888888'}; font-weight:bold;">
                                 ${isActive ? '[參戰]' : '[待命]'} ${skill.name}
@@ -145,17 +127,19 @@ export const SysPanel = {
                                 <button class="sys-btn action-toggle-skill" style="${isActive ? 'color:#ff5555; border-color:#ff5555;' : ''}" data-id="${skillId}">${isActive ? '取消' : '配置'}</button>
                                 <button class="sys-btn action-preview-vfx" style="border-color:#ffff55; color:#ffff55;" data-vfx="${skill.vfx}">展演</button>
                             </div>
-                            <div style="width:100%; font-size:12px; color:#888; margin-top:6px;">[${hitText}] 威力:${skill.power} | ${skill.msg}</div>
+                            <div style="width:100%; margin-top:4px;">${tagsHtml}</div>
+                            <div style="width:100%; font-size:12px; color:#888; margin-top:2px;">連擊消耗:${skill.comboCost} | 威力:${skill.power} | ${skill.msg}</div>
                          </div>`;
             });
         }
         else if (this.currentTab === 'train') {
-            html = `<div style="margin-bottom:15px; color:#aaaaaa;">消耗修為提升基礎屬性。</div>
-                    <div class="list-item"><span>基礎攻擊 (+5)</span> <button class="sys-btn action-train" data-stat="atk">花費 50 經驗</button></div>
-                    <div class="list-item"><span>基礎氣血 (+50)</span> <button class="sys-btn action-train" data-stat="hp">花費 50 經驗</button></div>
-                    <div class="list-item"><span>基礎輕功 (+5)</span> <button class="sys-btn action-train" data-stat="agi">花費 80 經驗</button></div>
-                    
-                    <hr style="border: 0; border-bottom: 1px dotted #555; margin:15px 0;">
+            let statsDict = { brawn:'臂力', physique:'根骨', qiCap:'內息', qiPot:'真元', agi:'身法', dex:'靈巧', per:'洞察', comp:'悟性', luck:'福緣' };
+            html = `<div style="margin-bottom:10px; color:#aaaaaa;">消耗 100 修為提升基礎屬性 (+1)。<br>目前修為: <span class="color-exp">${p.exp}</span></div>
+                    <div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:15px;">`;
+            for(let k in statsDict) {
+                html += `<button class="sys-btn action-train-base" data-stat="${k}" style="width:48%;">修練 ${statsDict[k]}</button>`;
+            }
+            html += `</div><hr style="border: 0; border-bottom: 1px dotted #555; margin:15px 0;">
                     <div style="color:#ffff55; margin-bottom:10px; font-weight:bold;">＜內功心法修練＞</div>
                     <div style="text-align:center; margin-bottom:10px;">
                         <button class="sys-btn" id="btn-meridian" style="width:100%; padding:8px; font-weight:bold; color:#55ffff;">【周天運轉】開啟經脈圖</button>
@@ -180,12 +164,6 @@ export const SysPanel = {
                             </div>
                          </div>`;
             });
-
-            html += `<div style="margin-top:15px; text-align:right; font-size:12px; color:#888;">
-                        [劇本測試] 
-                        <button class="sys-btn action-toggle-status" data-status="poisoned" style="${p.internal.status.poisoned ? 'color:#55ff55' : ''}">中毒</button>
-                        <button class="sys-btn action-toggle-status" data-status="injured" style="${p.internal.status.injured ? 'color:#ff5555' : ''}">內傷</button>
-                     </div>`;
         }
 
         this.el.innerHTML = html;
@@ -198,50 +176,35 @@ export const SysPanel = {
         this.el.querySelectorAll('.action-use').forEach(btn => btn.onclick = () => this.useItem(parseInt(btn.getAttribute('data-idx'))));
         this.el.querySelectorAll('.action-toggle-skill').forEach(btn => btn.onclick = () => this.toggleSkill(btn.getAttribute('data-id')));
         this.el.querySelectorAll('.action-preview-vfx').forEach(btn => btn.onclick = () => this.previewSkill(btn.getAttribute('data-vfx')));
-        this.el.querySelectorAll('.action-train').forEach(btn => btn.onclick = () => this.train(btn.getAttribute('data-stat')));
+        
+        this.el.querySelectorAll('.action-train-base').forEach(btn => {
+            btn.onclick = () => {
+                let stat = btn.getAttribute('data-stat');
+                if (GameState.player.exp < 100) { if(this.logger) this.logger.add("修為不足！", "warn-msg"); return; }
+                GameState.player.exp -= 100;
+                GameState.player.stats[stat] += 1;
+                if(this.logger) this.logger.add(`基礎屬性提升！`);
+                this.render();
+            };
+        });
 
-        // 經脈系統專屬按鈕
         let btnMeridian = this.el.querySelector('#btn-meridian');
         if (btnMeridian) btnMeridian.onclick = () => MeridianUI.toggle();
-
+        
         this.el.querySelectorAll('.action-train-art').forEach(btn => {
             btn.onclick = () => {
                 let artId = btn.getAttribute('data-art');
-                if (GameState.player.exp < 100) {
-                    if(this.logger) this.logger.add("修為不足以打通穴位！需要 100 點。", "warn-msg");
-                    return;
-                }
+                if (GameState.player.exp < 100) return;
                 GameState.player.exp -= 100;
                 GameState.player.internal.progress[artId] = (GameState.player.internal.progress[artId] || 0) + 1;
-                if(this.logger) this.logger.add(`【${DB_INTERNAL[artId].name}】突破！真氣貫通新穴位！`, "story-msg");
                 this.render();
-                MeridianUI.updateNodesStatic(); 
             };
         });
-
         this.el.querySelectorAll('.action-equip-art').forEach(btn => {
             btn.onclick = () => {
                 let artId = btn.getAttribute('data-art');
-                if (GameState.player.internal.active === artId) {
-                    GameState.player.internal.active = null;
-                    if(this.logger) this.logger.add(`停止運轉【${DB_INTERNAL[artId].name}】。`, "sys-msg");
-                } else {
-                    GameState.player.internal.active = artId;
-                    if(this.logger) this.logger.add(`開始運轉【${DB_INTERNAL[artId].name}】！真氣流轉全身！`, "story-msg");
-                }
+                GameState.player.internal.active = (GameState.player.internal.active === artId) ? null : artId;
                 this.render();
-                MeridianUI.updateNodesStatic();
-                MeridianUI.flowIdx = 0; 
-            };
-        });
-
-        this.el.querySelectorAll('.action-toggle-status').forEach(btn => {
-            btn.onclick = () => {
-                let status = btn.getAttribute('data-status');
-                GameState.player.internal.status[status] = !GameState.player.internal.status[status];
-                if(this.logger) this.logger.add(`觸發狀態異常：${status} = ${GameState.player.internal.status[status]}`, "warn-msg");
-                this.render();
-                MeridianUI.updateNodesStatic();
             };
         });
     },
@@ -268,8 +231,7 @@ export const SysPanel = {
     },
 
     useItem(invIdx) {
-        let itemId = GameState.player.inventory[invIdx];
-        let item = DB_ITEMS[itemId];
+        let item = DB_ITEMS[GameState.player.inventory[invIdx]];
         if (item && item.action) item.action(GameState.player, this.logger); 
         GameState.player.inventory.splice(invIdx, 1);
         this.render();
@@ -280,7 +242,6 @@ export const SysPanel = {
         let idx = p.activeSkills.indexOf(skillId);
         if (idx > -1) { 
             if (p.activeSkills.length > 1) p.activeSkills.splice(idx, 1); 
-            else if(this.logger) this.logger.add("至少需要配置一項武功才能防身！", "warn-msg");
         } else {
             p.activeSkills.push(skillId);
         }
@@ -292,18 +253,5 @@ export const SysPanel = {
         let startX = window.innerWidth / 2, startY = window.innerHeight / 2 + 100;
         let targetX = window.innerWidth / 2, targetY = window.innerHeight / 2 - 100;
         this.vfx.play(vfxId, startX, startY, targetX, targetY);
-    },
-
-    train(stat) {
-        let cost = stat === 'agi' ? 80 : 50;
-        if (GameState.player.exp < cost) { 
-            if(this.logger) this.logger.add("修為不足以打通經脈。", "warn-msg"); 
-            return; 
-        }
-        GameState.player.exp -= cost;
-        if (stat === 'atk') { GameState.player.baseAtk += 5; if(this.logger) this.logger.add("修練成功！基礎攻擊提升！"); }
-        if (stat === 'hp') { GameState.player.baseMaxHp += 50; GameState.player.hp += 50; if(this.logger) this.logger.add("修練成功！基礎氣血提升！"); }
-        if (stat === 'agi') { GameState.player.baseAgi += 5; if(this.logger) this.logger.add("修練成功！基礎輕功提升！"); }
-        this.render();
     }
 };

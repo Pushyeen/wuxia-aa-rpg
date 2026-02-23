@@ -320,3 +320,14 @@ body {
 .node-transit {
     font-weight: bold;
 }
+/* ==========================================
+   戰鬥標籤與承載區 (Combat Tags & Zones)
+   ========================================== */
+.zone-box { border: 1px solid #444; padding: 5px; font-size: 13px; min-height: 30px; margin-top: 5px; background: #111; text-align: left;}
+.zone-title { color: #ffff55; font-size: 12px; margin-bottom: 3px; border-bottom: 1px dotted #555; }
+.env-zone { min-height: 40px; text-align: center; color: #888; margin-top: 5px;}
+
+.tag { display: inline-block; padding: 1px 3px; font-size: 11px; margin-right: 3px; margin-top: 4px; background: #222; color: #fff; border-radius: 2px; border: 1px solid #444;}
+.tag.ice { color: #55aaff; border-color:#55aaff;} .tag.fire { color: #ff5555; border-color:#ff5555;} .tag.blunt { color: #ddaa77; border-color:#ddaa77;} 
+.tag.wind { color: #55ff55; border-color:#55ff55;} .tag.pull { color: #cc55ff; border-color:#cc55ff;} .tag.trap { color: #aaa; border-color:#aaa;}
+.tag.silk { color: #ff55aa; border-color:#ff55aa;} .tag.soft { color: #aaddff; border-color:#aaddff;} .tag.aura { color: #ffff55; border-color:#ffff55;}
