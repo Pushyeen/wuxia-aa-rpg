@@ -8,15 +8,16 @@ import { EventEngine } from './systems/events.js';
 import { CombatSystem } from './systems/combat.js';
 import { Logger } from './ui/logger.js';
 import { SysPanel } from './ui/sys_panel.js';
-import { AvatarUI } from './ui/avatar.js'; // 檢查這行大小寫
-import { MapDB } from './data/db_maps.js';
+import { AvatarUI } from './ui/avatar.js'; 
+// 【修正 1】：引入新版的地圖資料庫 DB_MAPS
+import { DB_MAPS } from './data/db_maps.js';
 
 let mapEngine, vfxEngine;
 
 function initGame() {
     WindowManager.init();
     Logger.init();
-    AvatarUI.init(); // <--- 啟動動態頭像與紙娃娃系統
+    AvatarUI.init(); 
     vfxEngine = new UltimateVFXEngine('vfx-layer');
     mapEngine = new MapEngine('map-canvas');
 
@@ -24,7 +25,9 @@ function initGame() {
         vfx: vfxEngine,
         logger: Logger,
         combat: CombatSystem,
-        ui: SysPanel
+        ui: SysPanel,
+        // 【修正 2】：將 mapEngine 注入依賴中，讓事件系統可以呼叫它來移除地圖上的 NPC
+        map: mapEngine 
     };
 
     EventEngine.init(deps);
@@ -33,14 +36,21 @@ function initGame() {
 
     SysPanel.render();
     
-    // 修正點 1：改用 updatePlayerPosition
     mapEngine.updatePlayerPosition(GameState.player.x, GameState.player.y);
     
-    Logger.add("系統初始化完成。歡迎來到 AA 武俠世界！", "sys-msg");
-    Logger.add("按 WASD 移動。尋找地圖上的【？】或【惡】。", "story-msg");
+ // 在 js/main.js 中找到 initGame 函式的最後面
+
+    // ... 前面的初始化程式碼保留 ...
+    SysPanel.render();
+    
+    mapEngine.updatePlayerPosition(GameState.player.x, GameState.player.y);
+    
+    // 【修改】：移除原本直接印 Log 的程式碼，改由事件引擎呼叫開局腳本
+    EventEngine.play('evt_start_game');
 }
 
 window.addEventListener("keydown", (e) => {
+    // 只有在探索模式下才能移動
     if (GameState.current !== "EXPLORE") return;
 
     let p = GameState.player;
@@ -52,28 +62,35 @@ window.addEventListener("keydown", (e) => {
 
     if (dx !== 0 || dy !== 0) {
         let nx = p.x + dx, ny = p.y + dy;
-        let tileId = MapDB.layout[ny] ? MapDB.layout[ny][nx] : null;
         
-        if (tileId !== null && tileId !== 1) { 
-            if (tileId === 4) { 
-                MapDB.layout[ny][nx] = 0; 
-                CombatSystem.start("bandit"); 
-            } 
+        // 取得當前地圖資料
+        let currentMapId = mapEngine.currentMapId || 'map_start';
+        let mapData = DB_MAPS[currentMapId];
+        
+        // 防呆：防止走出陣列範圍
+        if (!mapData || !mapData.matrix[ny] || !mapData.matrix[ny][nx]) return;
+        
+        // 【修正 3】：讀取字串矩陣中的字元，並判斷是否為牆壁(樹木)
+        let symbolChar = mapData.matrix[ny][nx];
+        let tileData = mapData.symbols[symbolChar];
+        
+        // 如果是牆壁，直接 return 阻擋移動
+        if (tileData && tileData.type === 'wall') return;
+        
+        // 允許移動：更新玩家座標與地圖渲染
+        p.x = nx; 
+        p.y = ny; 
+        mapEngine.updatePlayerPosition(p.x, p.y);
+        
+        // 【修正 4】：檢查新座標點上是否有事件
+        let evtId = mapData.events[`${nx},${ny}`];
+        if (evtId) {
+            // 將觸發事件的座標記錄下來 (為了讓腳本知道要移除哪個座標的 NPC)
+            GameState.currentEventX = nx;
+            GameState.currentEventY = ny;
             
-            p.x = nx; 
-            p.y = ny; 
-            
-            // 修正點 2：改用 updatePlayerPosition
-            mapEngine.updatePlayerPosition(p.x, p.y);
-            
-            let evtId = MapDB.events[`${nx},${ny}`];
-            if (evtId) {
-                if (evtId === "battle_bandit") {
-                    CombatSystem.start("bandit");
-                } else {
-                    EventEngine.play(evtId);
-                }
-            }
+            // 統一交給 EventEngine 處理 (包含戰鬥、對話、給道具等，因為我們已將戰鬥寫入 db_scripts.js 中)
+            EventEngine.play(evtId);
         }
     }
 });

@@ -8,7 +8,27 @@ export const DB_SKILLS = {
         msg: "無招勝有招，看似瞎比劃實則威力無窮！",
         hits: 1
     },
-    
+    // --- 敵方專屬武學 ---
+    's_enemy_blunt': {
+        name: "碎岩棒法", type: "phys", power: 40, comboCost: 30, tags: ["鈍"], vfx: "strike",
+        msg: "沉重的一擊，專破堅冰！"
+    },
+    's_enemy_fire': {
+        name: "烈焰掌", type: "qi", power: 50, comboCost: 35, tags: ["炎"], vfx: "fireball",
+        msg: "掌風熾熱，能引發灼燒與殉爆！"
+    },
+    's_enemy_wind': {
+        name: "狂風掃落葉", type: "qi", power: 30, comboCost: 20, tags: ["風"], vfx: "slash",
+        msg: "狂風呼嘯，若遇火勢將引發【風火燎原】！"
+    },
+    's_enemy_ice': {
+        name: "玄冰刺", type: "qi", power: 45, comboCost: 25, tags: ["寒", "銳"], vfx: "sword_rain",
+        msg: "尖銳的冰柱，寒氣逼人！"
+    },
+    's_enemy_pull': {
+        name: "擒龍控鶴", type: "qi", power: 10, comboCost: 15, tags: ["牽引"], vfx: "strike",
+        msg: "強大的吸力，能引動周遭暗器！"
+    },
     // ❄️ 凜冬霸劍流
     "ice_1": { name: "寒霜劍氣", tags: ["寒", "銳"], type: "qi", power: 60, comboCost: 45, vfx: "wind_sword", msg: "賦予 1 層寒氣。", onHit: (ctx) => ctx.addTag(ctx.target, 'ice', 1) },
     "ice_2": { name: "傲雪凌霜", tags: ["Aura"], type: "qi", power: 0, comboCost: 50, vfx: "ice_shatter", msg: "獲得冰盾(受擊反傷寒氣)。", onHit: (ctx) => ctx.addAura(ctx.attacker, '冰盾', 2) },

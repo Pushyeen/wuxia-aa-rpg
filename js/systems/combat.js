@@ -385,16 +385,30 @@ export const CombatSystem = {
             await new Promise(r => setTimeout(r, 200));
         }
     },
-
-    endBattle(isWin) {
+endBattle(isWin) {
         if (this.battleEnded) return; 
         this.battleEnded = true;      
         clearInterval(this.interval);
         
         if (isWin) {
             let exp = this.enemyRef.stats.dropExp || 100;
-            if (this.logger) this.logger.add(`[戰鬥] 戰鬥勝利！獲得 ${exp} 點經驗。`, "sys-msg"); 
+            let dropStats = this.enemyRef.stats.dropStats;
+            let statMsg = "";
+            
             GameState.player.exp += exp;
+            
+            // 【新增】：處理敵人掉落的屬性點獎勵
+            if (dropStats) {
+                let statsDict = { brawn:'臂力', physique:'根骨', qiCap:'內息', qiPot:'真元', agi:'身法', dex:'靈巧', per:'洞察', comp:'悟性' };
+                let gains = [];
+                for (let k in dropStats) {
+                    GameState.player.stats[k] += dropStats[k];
+                    gains.push(`${statsDict[k]}+${dropStats[k]}`);
+                }
+                statMsg = ` 屬性提升：${gains.join('、')}！`;
+            }
+            
+            if (this.logger) this.logger.add(`[戰鬥] 戰鬥勝利！獲得 ${exp} 點經驗。${statMsg}`, "sys-msg"); 
             
             setTimeout(() => { 
                 if (this.win) this.win.remove(); 
@@ -405,6 +419,27 @@ export const CombatSystem = {
         } else {
             if (this.logger) this.logger.add(`[戰鬥] 少俠敗陣...`, "warn-msg");
             if(this.resolveBattle) this.resolveBattle(false);
+            
+            if (this.win) {
+                let content = this.win.querySelector('.drag-content');
+                if (content) {
+                    content.innerHTML = `
+                        <div style="text-align: center; padding: 40px 20px;">
+                            <div style="font-size: 36px; color: #ff0000; text-shadow: 0 0 15px #ff0000, 2px 2px 0 #000; margin-bottom: 20px; font-weight: 900; letter-spacing: 5px;">
+                                勝敗乃兵家常事
+                            </div>
+                            <div style="color: #aaa; margin-bottom: 40px; font-size: 16px;">
+                                少俠傷重倒地，您的大俠之路就此畫下句點...
+                            </div>
+                            <button id="bat-btn-restart" class="sys-btn" style="font-size: 20px; padding: 12px 40px; border-color: #ff5555; color: #ffaaaa; background: #440000; cursor: pointer; box-shadow: 0 0 10px rgba(255,0,0,0.5);">
+                                🔄 重新來過
+                            </button>
+                        </div>
+                    `;
+                    let btnRestart = content.querySelector('#bat-btn-restart');
+                    if (btnRestart) btnRestart.onclick = () => window.location.reload(); 
+                }
+            }
         }
     }
-};
+}

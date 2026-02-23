@@ -44,7 +44,7 @@ export const MeridianUI = {
         let color = art ? art.color : '#888';
 
         let html = `
-            <div id="meridian-container" style="background:#000; padding: 20px; text-align:center; font-family:'PMingLiU', 'MingLiU', monospace; font-size:16px; line-height:1.4; position:relative; overflow:hidden;">
+            <div id="meridian-container" style="background:#000; padding: 20px; text-align:center; font-family:'PMingLiU', 'MingLiU', monospace; font-size:16px; line-height:1.4; position:relative;">
                 <div style="white-space: pre; display: inline-block; text-align: left; color: #333;">${MAP_AA}</div>
                 <div id="meridian-desc" style="margin-top:20px; font-size:14px; color:${color}; text-shadow: 0 0 5px ${color};">
                     ${descHtml}
@@ -53,6 +53,39 @@ export const MeridianUI = {
         `;
         
         this.win = WindowManager.create("【經脈周天圖】", html);
+
+        // 利用 requestAnimationFrame 在視窗建立後立刻抓取寬高，進行對齊主遊戲介面的完美置中
+        requestAnimationFrame(() => {
+            if (!this.win) return;
+            let winWidth = this.win.offsetWidth;
+            let winHeight = this.win.offsetHeight;
+            
+            // 【修改】：抓取遊戲主容器的座標，以該容器為中心
+            let gameContainer = document.getElementById('game-master-container');
+            let left = 0, top = 0;
+            
+            if (gameContainer) {
+                let rect = gameContainer.getBoundingClientRect();
+                left = rect.left + (rect.width - winWidth) / 2;
+                top = rect.top + (rect.height - winHeight) / 2;
+            } else {
+                // 如果找不到容器的防呆機制，退回全螢幕置中
+                left = (window.innerWidth - winWidth) / 2;
+                top = (window.innerHeight - winHeight) / 2;
+            }
+
+            // 確保視窗不會超出畫面左方與上方
+            this.win.style.left = Math.max(10, left-500) + 'px';
+            this.win.style.top = Math.max(10, top-300) + 'px';
+
+            // 防呆機制：若玩家螢幕高度不足以顯示整張圖，自動賦予捲動功能並限制高度
+            let container = this.win.querySelector('#meridian-container');
+            let screenH = window.innerHeight;
+            if (container && winHeight > screenH - 40) {
+                container.style.maxHeight = (screenH - 80) + 'px';
+                container.style.overflowY = 'auto';
+            }
+        });
 
         this.updateNodesStatic();
         // 啟動高頻率的粒子發射器，模擬源源不絕的氣流
@@ -64,7 +97,6 @@ export const MeridianUI = {
         if (this.win) { this.win.remove(); this.win = null; }
     },
 
-    // 靜態更新：賦予各穴位不同的重要程度與動畫
     updateNodesStatic() {
         if (!this.win) return;
         let p = GameState.player;
@@ -72,7 +104,7 @@ export const MeridianUI = {
         let allNodes = container.querySelectorAll('.acu-node');
         
         allNodes.forEach(n => {
-            n.className = 'acu-node'; // 重置
+            n.className = 'acu-node'; 
             n.style.color = '#333';
             n.style.textShadow = 'none';
         });
@@ -91,20 +123,15 @@ export const MeridianUI = {
                 n.classList.add('unlocked');
                 n.style.color = activeArt.color;
                 
-                // 【核心展演】：依據穴位在此內功中的地位，給予不同特效
                 if (i === 0) {
-                    // 起點 (通常是丹田)：如引擎般強烈搏動
                     n.classList.add('node-origin');
                     n.style.textShadow = `0 0 15px ${activeArt.color}`;
                 } else if (i === activeArt.path.length - 1 && i === progress - 1) {
-                    // 終點 (大圓滿)：散發極強的光芒
                     n.classList.add('node-terminus');
                     n.style.textShadow = `0 0 25px ${activeArt.color}, 0 0 50px ${activeArt.color}`;
                 } else if (i === progress - 1) {
-                    // 當前衝穴的關口 (最前線)：閃爍不定，表現突破中的狀態
                     n.classList.add('node-frontier');
                 } else {
-                    // 途經節點：平穩的光暈
                     n.classList.add('node-transit');
                     n.style.textShadow = `0 0 5px ${activeArt.color}`;
                 }
@@ -119,7 +146,6 @@ export const MeridianUI = {
         }
     },
 
-    // 動態更新：發射流動的文字真氣
     spawnParticles() {
         let p = GameState.player;
         let activeId = p.internal.active;
@@ -127,18 +153,16 @@ export const MeridianUI = {
 
         let activeArt = DB_INTERNAL[activeId];
         let progress = p.internal.progress[activeId] || 0;
-        if (progress < 2) return; // 至少要打通兩個穴位才能流動
+        if (progress < 2) return; 
 
         let container = this.win.querySelector('#meridian-container');
         if (!container) return;
 
-        let status = p.internal.status;
+        let status = p.internal.status || {}; 
         let conf = activeArt.flowConf;
 
-        // 內力強度展演：打通越多穴位，氣流越密集 (生成機率越高)
         let spawnChance = 0.2 + (progress * 0.1); 
 
-        // 遍歷已打通的經脈路徑，在相鄰穴位間生成氣流
         for(let i = 0; i < progress - 1; i++) {
             if (Math.random() > spawnChance) continue;
 
@@ -148,7 +172,6 @@ export const MeridianUI = {
             let startNodes = container.querySelectorAll(`[data-acu="${startAcu}"]`);
             let endNodes = container.querySelectorAll(`[data-acu="${endAcu}"]`);
 
-            // 自動配對左右對稱的穴位分支 (如：左肩流向左手，右肩流向右手)
             startNodes.forEach((startEl, idx) => {
                 let endEl = endNodes[idx % endNodes.length]; 
                 
@@ -162,26 +185,23 @@ export const MeridianUI = {
         }
     },
 
-    // 實作文字飛行特效
     createParticle(container, sX, sY, eX, eY, art, conf, status) {
         let el = document.createElement('div');
         
         let charList = conf.chars;
         let color = art.color;
         let duration = conf.speed;
-        let easing = 'ease-in-out'; // 預設順暢的真氣流動
+        let easing = 'ease-in-out'; 
 
-        // 異常屬性覆寫：中毒
         if (status.poisoned) {
             charList = ["毒", "厄", "腐", "♨"];
             color = Math.random() > 0.5 ? "#55ff55" : "#aa00ff";
         }
-        // 異常屬性覆寫：內傷 (走火入魔)
         if (status.injured) {
             charList = ["阻", "滯", "逆", "亂", "⚠"];
             color = Math.random() > 0.5 ? "#ff0000" : "#440000";
-            duration *= (1.5 + Math.random()); // 速度忽快忽慢
-            easing = 'steps(4, end)'; // 呈現卡頓、跳躍式的流動感
+            duration *= (1.5 + Math.random()); 
+            easing = 'steps(4, end)'; 
         }
 
         let char = charList[Math.floor(Math.random() * charList.length)];
@@ -199,11 +219,9 @@ export const MeridianUI = {
 
         container.appendChild(el);
 
-        // 氣流飄浮的隨機偏移 (讓氣流不會走死板的直線)
         let midX = (sX + eX)/2 + (Math.random()-0.5)*25;
         let midY = (sY + eY)/2 + (Math.random()-0.5)*25;
 
-        // Web Animations API
         let anim = el.animate([
             { transform: `translate(${sX}px, ${sY}px) scale(0.3)`, opacity: 0 },
             { transform: `translate(${midX}px, ${midY}px) scale(1.2)`, opacity: 0.9 },
@@ -213,7 +231,6 @@ export const MeridianUI = {
             easing: easing
         });
 
-        // 動畫結束後自動銷毀 DOM 節點，維持效能
         anim.onfinish = () => el.remove();
     }
 };
