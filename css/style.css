@@ -331,3 +331,74 @@ body {
 .tag.ice { color: #55aaff; border-color:#55aaff;} .tag.fire { color: #ff5555; border-color:#ff5555;} .tag.blunt { color: #ddaa77; border-color:#ddaa77;} 
 .tag.wind { color: #55ff55; border-color:#55ff55;} .tag.pull { color: #cc55ff; border-color:#cc55ff;} .tag.trap { color: #aaa; border-color:#aaa;}
 .tag.silk { color: #ff55aa; border-color:#ff55aa;} .tag.soft { color: #aaddff; border-color:#aaddff;} .tag.aura { color: #ffff55; border-color:#ffff55;}
+
+/* ==========================================
+   傷害飄浮數字特效 (Floating Damage Numbers)
+   ========================================== */
+.dmg-float-base {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    pointer-events: none; /* 避免干擾點擊 */
+    z-index: 999;
+    font-weight: 900;
+    font-family: 'Arial Black', Impact, sans-serif;
+    /* 復古街機風格的厚重黑邊 */
+    text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 4px 4px 0 rgba(0,0,0,0.8);
+    opacity: 0;
+}
+
+/* Tier 1: 一般傷害 (< 25%) - 輕微往上飄 */
+.dmg-tier-1 { color: #ffffff; font-size: 24px; animation: floatNormal 1.2s ease-out forwards; }
+
+/* Tier 2: 沉重一擊 (25% ~ 49%) - 放大並呈現橘色 */
+.dmg-tier-2 { color: #ffaa00; font-size: 36px; animation: floatHeavy 1.2s ease-out forwards; }
+
+/* Tier 3: 猛烈打擊 (50% ~ 74%) - 紅色劇烈彈跳 */
+.dmg-tier-3 { color: #ff5555; font-size: 50px; animation: floatCritical 1.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; text-shadow: 0 0 10px #ff0000, 2px 2px 0 #000, -2px -2px 0 #000; }
+
+/* Tier 4: 致命重創 (75% ~ 99%) - 紫光爆裂與鏡頭震顫 */
+.dmg-tier-4 { color: #ff00ff; font-size: 65px; animation: floatFatal 1.4s ease-out forwards; text-shadow: 0 0 20px #ff00ff, 3px 3px 0 #000, -3px -3px 0 #000; }
+
+/* Tier 5: 一擊必殺 (>= 100%) - 誇張的金色爆閃，巨大化 */
+.dmg-tier-5 { color: #ffffaa; font-size: 90px; animation: floatAnnihilation 1.5s ease-out forwards; text-shadow: 0 0 30px #ff0000, 0 0 15px #ffff00, 4px 4px 0 #000; }
+
+/* 基礎上升動畫 */
+@keyframes floatNormal {
+    0% { opacity: 1; transform: translate(-50%, 0) scale(0.5); }
+    20% { transform: translate(-50%, -20px) scale(1.1); }
+    100% { opacity: 0; transform: translate(-50%, -60px) scale(1); }
+}
+
+/* 沉重打擊的滯空感 */
+@keyframes floatHeavy {
+    0% { opacity: 1; transform: translate(-50%, 0) scale(0.5); }
+    15% { transform: translate(-50%, -30px) scale(1.3); }
+    30% { transform: translate(-50%, -25px) scale(1.1); }
+    100% { opacity: 0; transform: translate(-50%, -70px) scale(1); }
+}
+
+/* 暴擊特效：彈出與快速縮放 */
+@keyframes floatCritical {
+    0% { opacity: 1; transform: translate(-50%, 0) scale(0.2); }
+    20% { transform: translate(-50%, -40px) scale(1.5); }
+    40% { transform: translate(-50%, -35px) scale(1.2); }
+    100% { opacity: 0; transform: translate(-50%, -80px) scale(1.2); }
+}
+
+/* 致命特效：左右震動再上飄 */
+@keyframes floatFatal {
+    0% { opacity: 1; transform: translate(-50%, 0) scale(0.5) rotate(-10deg); }
+    10% { transform: translate(-40%, -20px) scale(1.8) rotate(10deg); }
+    20% { transform: translate(-60%, -30px) scale(1.6) rotate(-5deg); }
+    30% { transform: translate(-50%, -40px) scale(1.4) rotate(0deg); }
+    100% { opacity: 0; transform: translate(-50%, -90px) scale(1.4) rotate(0deg); }
+}
+
+/* 毀滅特效：爆閃與極致滯空 */
+@keyframes floatAnnihilation {
+    0% { opacity: 1; transform: translate(-50%, 10px) scale(0.1); filter: brightness(3); }
+    15% { transform: translate(-50%, -50px) scale(2.0); filter: brightness(2); }
+    30% { transform: translate(-50%, -40px) scale(1.6); filter: brightness(1); }
+    50% { opacity: 1; transform: translate(-50%, -45px) scale(1.7); }
+    100% { opacity: 0; transform: translate(-50%, -100px) scale(1.5) filter: blur(2px); }
+}

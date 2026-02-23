@@ -8,7 +8,13 @@ import { MeridianUI } from './meridian_ui.js';
 
 export const SysPanel = {
     currentTab: 'status',
+    currentSkillFilter: 'all', // 【新增】：記錄當前武功篩選狀態
     el: null, vfx: null, logger: null,
+
+    acuNames: {
+        "dan": "丹田", "hai": "氣海", "que": "神闕", "shan": "膻中", "tu": "天突", "yin": "印堂", "baihui": "百會",
+        "huan": "環跳", "li": "三里", "quan": "湧泉", "jian": "肩井", "qu": "曲池", "lao": "勞宮"
+    },
 
     init(deps) {
         this.el = document.getElementById('sys-content');
@@ -22,6 +28,16 @@ export const SysPanel = {
                 this.render();
             });
         });
+    },
+
+    getTrainSuccessRate(artId, progress, p) {
+        let s = p.stats;
+        let rate = 40; 
+        if (artId === 'art_yang') rate += (s.brawn + s.physique) / 2;
+        else if (artId === 'art_yin') rate += (s.qiCap + s.agi) / 2;
+        else if (artId === 'art_taiji') rate += (s.comp + s.qiPot) / 2;
+        rate -= progress * 10; 
+        return Math.max(5, Math.min(100, Math.floor(rate)));
     },
 
     updateStats() {
@@ -107,10 +123,26 @@ export const SysPanel = {
             if (!hasItem) html += "<div style='color:#888;'>背包裡沒有可用道具。</div>";
         }
         else if (this.currentTab === 'skill') {
-            html += `<div style="color:#ffff55; margin-bottom:5px; font-weight:bold;">＜配置參戰快捷武學＞</div>`;
+            // 【新增】：武學分類過濾器
+            html += `
+                <div style="display:flex; gap:5px; margin-bottom:10px; flex-wrap:wrap; border-bottom:1px solid #555; padding-bottom:8px;">
+                    <button class="sys-btn action-filter-skill" data-filter="all" style="${this.currentSkillFilter==='all'?'background:#0000aa; border-color:#fff;':''}">全部</button>
+                    <button class="sys-btn action-filter-skill" data-filter="寒" style="${this.currentSkillFilter==='寒'?'background:#0000aa; border-color:#fff;':''}">寒冰</button>
+                    <button class="sys-btn action-filter-skill" data-filter="炎" style="${this.currentSkillFilter==='炎'?'background:#0000aa; border-color:#fff;':''}">烈火</button>
+                    <button class="sys-btn action-filter-skill" data-filter="絲線" style="${this.currentSkillFilter==='絲線'?'background:#0000aa; border-color:#fff;':''}">幽影(絲)</button>
+                    <button class="sys-btn action-filter-skill" data-filter="柔" style="${this.currentSkillFilter==='柔'?'background:#0000aa; border-color:#fff;':''}">太極</button>
+                    <button class="sys-btn action-filter-skill" data-filter="佈置" style="${this.currentSkillFilter==='佈置'?'background:#0000aa; border-color:#fff;':''}">天工(機關)</button>
+                </div>
+                <div style="color:#ffff55; margin-bottom:5px; font-weight:bold;">＜配置參戰快捷武學＞</div>
+            `;
+            
             p.skills.forEach(skillId => {
                 let skill = DB_SKILLS[skillId];
                 if (!skill) return;
+                
+                // 【新增】：過濾邏輯
+                if (this.currentSkillFilter !== 'all' && !skill.tags.includes(this.currentSkillFilter)) return;
+
                 let isActive = p.activeSkills.includes(skillId);
                 let bgStyle = isActive ? 'background:#000044;' : 'transparent';
                 
@@ -153,14 +185,33 @@ export const SysPanel = {
                 let isActive = p.internal.active === artId;
                 let bgStyle = isActive ? 'background:#000044;' : 'transparent';
                 
-                html += `<div class="list-item" style="${bgStyle}">
-                            <div style="width: 50%;">
-                                <div style="color:${art.color}; font-weight:bold;">${isActive ? '[運轉中]' : ''} ${art.name}</div>
-                                <div style="font-size:12px; color:#888;">境界: ${progress} / ${max}</div>
+                let nextAcu = progress < max ? this.acuNames[art.path[progress]] : "大圓滿";
+                let successRate = progress < max ? this.getTrainSuccessRate(artId, progress, p) : 0;
+                
+                let buffStr = [];
+                if(art.buff.hp) buffStr.push(`氣血+${art.buff.hp}`);
+                if(art.buff.atk) buffStr.push(`外攻+${art.buff.atk}`);
+                if(art.buff.def) buffStr.push(`硬功+${art.buff.def}`);
+                if(art.buff.agi) buffStr.push(`閃避+${art.buff.agi}`);
+                let buffText = buffStr.join(" ");
+                
+                html += `<div class="list-item" style="flex-wrap:wrap; ${bgStyle}">
+                            <div style="width: 100%; color:${art.color}; font-weight:bold; margin-bottom:4px;">
+                                ${isActive ? '[運轉中]' : ''} ${art.name}
                             </div>
-                            <div style="width: 50%; text-align: right;">
+                            <div style="width: 100%; font-size:12px; color:#aaa; margin-bottom:4px; line-height: 1.4;">
+                                ${art.desc}
+                            </div>
+                            <div style="width: 65%; font-size:12px; color:#888;">
+                                境界: ${progress} / ${max} <br>
+                                ${progress < max ? `衝擊穴位: <span style="color:#fff">[${nextAcu}]</span> | 成功率: <span style="color:#55ffff">${successRate}%</span>` : `<span style="color:#ffff55">已達大圓滿境界</span>`}
+                            </div>
+                            <div style="width: 35%; text-align: right;">
                                 <button class="sys-btn action-train-art" data-art="${artId}" ${progress >= max ? 'disabled' : ''}>衝穴</button>
                                 <button class="sys-btn action-equip-art" data-art="${artId}" style="${isActive ? 'color:#ff5555; border-color:#ff5555;' : ''}">${isActive ? '卸下' : '運轉'}</button>
+                            </div>
+                            <div style="width: 100%; font-size:12px; color:#55ff55; margin-top:4px;">
+                                每重加成: ${buffText}
                             </div>
                          </div>`;
             });
@@ -177,6 +228,14 @@ export const SysPanel = {
         this.el.querySelectorAll('.action-toggle-skill').forEach(btn => btn.onclick = () => this.toggleSkill(btn.getAttribute('data-id')));
         this.el.querySelectorAll('.action-preview-vfx').forEach(btn => btn.onclick = () => this.previewSkill(btn.getAttribute('data-vfx')));
         
+        // 【新增】：綁定篩選器按鈕事件
+        this.el.querySelectorAll('.action-filter-skill').forEach(btn => {
+            btn.onclick = () => {
+                this.currentSkillFilter = btn.getAttribute('data-filter');
+                this.render();
+            };
+        });
+
         this.el.querySelectorAll('.action-train-base').forEach(btn => {
             btn.onclick = () => {
                 let stat = btn.getAttribute('data-stat');
@@ -194,12 +253,39 @@ export const SysPanel = {
         this.el.querySelectorAll('.action-train-art').forEach(btn => {
             btn.onclick = () => {
                 let artId = btn.getAttribute('data-art');
-                if (GameState.player.exp < 100) return;
-                GameState.player.exp -= 100;
-                GameState.player.internal.progress[artId] = (GameState.player.internal.progress[artId] || 0) + 1;
+                let p = GameState.player;
+                let progress = p.internal.progress[artId] || 0;
+                let art = DB_INTERNAL[artId];
+                
+                if (p.exp < 100) { 
+                    if(this.logger) this.logger.add("衝穴需消耗 100 修為，修為不足！", "warn-msg"); 
+                    return; 
+                }
+                
+                p.exp -= 100;
+                let rate = this.getTrainSuccessRate(artId, progress, p);
+                let roll = Math.floor(Math.random() * 100) + 1;
+                let targetAcu = this.acuNames[art.path[progress]];
+
+                if (roll <= rate) {
+                    p.internal.progress[artId] = progress + 1;
+                    
+                    let statGains = "";
+                    if (artId === 'art_yang') { p.stats.physique += 1; p.stats.brawn += 1; statGains = "根骨+1、臂力+1"; }
+                    else if (artId === 'art_yin') { p.stats.qiCap += 1; p.stats.agi += 1; statGains = "內息+1、身法+1"; }
+                    else if (artId === 'art_taiji') { p.stats.qiPot += 1; p.stats.comp += 1; statGains = "真元+1、悟性+1"; }
+                    
+                    if(this.logger) this.logger.add(`✅ 成功貫通【${targetAcu}】！境界提升，永久獲得 ${statGains}！`, "story-msg");
+                    
+                    if(MeridianUI.win) MeridianUI.updateNodesStatic();
+                } else {
+                    if(this.logger) this.logger.add(`❌ 衝擊【${targetAcu}】失敗！真氣潰散，白白損失了修為。(機率: ${rate}%)`, "warn-msg");
+                }
+                
                 this.render();
             };
         });
+
         this.el.querySelectorAll('.action-equip-art').forEach(btn => {
             btn.onclick = () => {
                 let artId = btn.getAttribute('data-art');

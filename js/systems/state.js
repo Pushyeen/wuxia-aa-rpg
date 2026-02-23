@@ -8,7 +8,7 @@ export const GameState = {
     player: {
         x: 5, y: 5, lv: 1, exp: 9999, hp: 3000, maxHp: 3000, 
         poise: 100, maxPoise: 100, atb: 0,
-        combatMode: "manual", 
+        combatMode: "auto", 
         stats: { brawn: 50, physique: 50, qiCap: 50, qiPot: 50, agi: 50, dex: 50, per: 50, comp: 50, luck: 50 },
         inventory: [
             "i_potion", "i_pill", "i_lotus", 
