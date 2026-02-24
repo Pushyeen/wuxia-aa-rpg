@@ -99,26 +99,31 @@ export const DB_REACTIONS = [
             return 1.3; // 額外提升本次共振招式的基礎威力
         } 
     },
-    // 連鎖 1：【千機連發】 (彈藥消耗與威力增幅)
+// 連鎖 1：【千機連發】 (每發暗器獨立判定與消耗)
     { 
         id: "tang_ammo_burst", 
         name: "千機連發", 
-        // 條件：攻擊帶有 [連動]，且攻擊者身上還有至少 3 發 [千機匣] 彈藥
-        condition: (tags, t, env, attacker) => tags.includes("連動") && (attacker.aura && attacker.aura['千機匣'] >= 3), 
+        // 條件：攻擊帶有 [連動]，且攻擊者身上還有至少 1 發 [千機匣] 彈藥
+        condition: (tags, t, env, attacker) => tags.includes("連動") && (attacker.aura && attacker.aura['千機匣'] >= 1), 
         execute: (t, p, e, log) => { 
-            p.aura['千機匣'] -= 3; // 消耗彈藥
-            log(`⚙️ 【千機連發】千機匣火力全開！消耗 3 發彈藥，暗器威力暴增！(剩餘彈藥: ${p.aura['千機匣']})`, "warn-msg"); 
-            return 4.0; // 招式基礎威力乘以 4 倍！
+            p.aura['千機匣'] -= 1; // 每次打擊(Hit)精準消耗 1 發彈藥
+            log(`⚙️ 【千機連動】消耗 1 發彈藥，本發暗器威力暴增！(剩餘: ${p.aura['千機匣']})`, "warn-msg"); 
+            return 3.0; // 有彈藥時，該次打擊威力乘以 3 倍！
         } 
     },
 
-    // 連鎖 2：【見血封喉】 (即時毒素引爆)
+    // 連鎖 2：【見血封喉】 (引爆毒素也必須有實體毒針彈藥加持)
     { 
         id: "tang_toxic_catalyst", 
         name: "見血封喉", 
-        // 條件：銳器攻擊，且玩家身上有 [破甲毒]
-        condition: (tags, t) => tags.includes("銳") && (t.tags && t.tags['破甲毒'] > 0), 
+        // 條件：銳器攻擊，玩家有 [破甲毒]，且唐翎必須有至少 1 發彈藥才能刺破護甲
+        condition: (tags, t, env, attacker) => tags.includes("銳") && (t.tags && t.tags['破甲毒'] > 0) && (attacker.aura && attacker.aura['千機匣'] >= 1), 
         execute: (t, p, e, log) => { 
+            // 如果是絕殺技(帶有催化標籤)，獨立消耗 1 發彈藥。若是連動技，彈藥已在上方扣除。
+            if (tags.includes("催化")) {
+                p.aura['千機匣'] -= 1;
+            }
+            
             let stacks = t.tags['破甲毒'];
             t.tags['破甲毒'] = 0; // 引爆後清空
             
@@ -126,8 +131,8 @@ export const DB_REACTIONS = [
             let trueDmg = Math.floor(t.maxHp * 0.08 * stacks); 
             t.hp -= trueDmg; 
             
-            log(`☠️ 【見血封喉】銳器引發了劇毒反應！毒素瞬間腐蝕心脈，造成 ${trueDmg} 點真實傷害！`, "dmg-msg"); 
-            return 1.5; // 銳器本身的傷害也獲得 1.5 倍加成
+            log(`☠️ 【見血封喉】毒針刺破護甲！毒素瞬間腐蝕心脈，造成 ${trueDmg} 點真實傷害！`, "dmg-msg"); 
+            return 1.5; // 銳器本身的傷害也獲得加成
         } 
     }
 ];

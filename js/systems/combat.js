@@ -27,7 +27,7 @@ export const CombatSystem = {
             if (!eData) return resolve();
 
             // 雙方皆初始化 aura 氣場與 hitCombo 打擊數
-            this.enemyRef = { id: enemyId, hp: eData.hp, maxHp: eData.maxHp, wait: 0, stats: eData.stats, tags: {}, aura: {}, hitCombo: 0 };
+            this.enemyRef = { id: enemyId, hp: eData.hp, maxHp: eData.maxHp, wait: 0, stats: eData.stats, tags: {},aura: eData.aura ? { ...eData.aura } : {}, hitCombo: 0 };
             this.playerRef = { hp: GameState.player.hp, maxHp: GameState.player.maxHp, wait: 0, currentCombo: 0, aura: {}, tags: {}, hitCombo: 0 };
             GameState.env = { needles: 0, fire: 0, gears: 0, taichi: 0, turret: 0 };
             
