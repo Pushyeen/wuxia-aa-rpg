@@ -26,8 +26,9 @@ export const CombatSystem = {
             let eData = DB_ENEMIES[enemyId];
             if (!eData) return resolve();
 
-            this.enemyRef = { id: enemyId, hp: eData.hp, maxHp: eData.maxHp, wait: 0, stats: eData.stats, tags: {} };
-            this.playerRef = { hp: GameState.player.hp, maxHp: GameState.player.maxHp, wait: 0, currentCombo: 0, aura: {}, tags: {} };
+            // 雙方皆初始化 aura 氣場與 hitCombo 打擊數
+            this.enemyRef = { id: enemyId, hp: eData.hp, maxHp: eData.maxHp, wait: 0, stats: eData.stats, tags: {}, aura: {}, hitCombo: 0 };
+            this.playerRef = { hp: GameState.player.hp, maxHp: GameState.player.maxHp, wait: 0, currentCombo: 0, aura: {}, tags: {}, hitCombo: 0 };
             GameState.env = { needles: 0, fire: 0, gears: 0, taichi: 0, turret: 0 };
             
             this.isExecuting = false;
@@ -63,6 +64,7 @@ export const CombatSystem = {
         if (this.logger) this.logger.add(`[戰鬥] ${msg.replace(/<[^>]*>?/gm, '')}`, cls);
     },
 
+    // 讓 createContext 可以辨識對象
     createContext(attackerRef, targetRef) {
         return {
             attacker: attackerRef, target: targetRef, env: GameState.env, log: (m, c) => this.log(m, c),
@@ -72,50 +74,75 @@ export const CombatSystem = {
                 if (!t.tags[tag]) t.tags[tag] = 0; 
                 t.tags[tag] += amt; 
                 
+                let targetName = t === this.playerRef ? '少俠' : '敵人';
+                
                 if (tag === 'ice' && t.tags.ice >= 3) { 
                     t.tags.ice = 0; 
                     t.tags.frozen = true; 
                     t.tags.frozen_timer = 0;
-                    this.log(`🧊 寒氣入骨，${t === this.playerRef ? '少俠' : '敵人'}被凍結了！防禦力大幅下降且無法行動！`, "warn-msg"); 
+                    this.log(`🧊 寒氣入骨，${targetName}被凍結了！防禦力大幅下降且無法行動！`, "warn-msg"); 
                     if(this.win && !this.battleEnded) { this.win.classList.add('shake-effect'); setTimeout(() => {if(this.win) this.win.classList.remove('shake-effect');}, 200); }
                 }
                 if (tag === 'silk' && t.tags.silk >= 5) { 
                     t.tags.silk = 0; 
                     t.hp -= 300; 
-                    this.log(`🕸️ 天羅地網絞殺！造成 300 點真實傷害！`, "warn-msg"); 
+                    this.log(`🕸️ 天羅地網絞殺！對${targetName}造成 300 點真實傷害！`, "warn-msg"); 
                     let cId = t === this.playerRef ? 'bat-target-player' : 'bat-target-enemy';
                     if (!this.battleEnded) CombatUI.showFloatingDamage(cId, 300, 300 / t.maxHp);
                     if(this.win && !this.battleEnded) { this.win.classList.add('shake-effect'); setTimeout(() => {if(this.win) this.win.classList.remove('shake-effect');}, 200); }
                 }
             },
-            addAura: (p, type, amt) => { if(this.battleEnded) return; if(!p.aura[type]) p.aura[type]=0; p.aura[type]+=amt; this.log(`✨ 獲得氣場：${type}`, "story-msg"); },
-            addEnv: (type, amt) => { if(this.battleEnded) return; let limit = Math.floor(StatEngine.getDerived(GameState.player).qiCap / 10); GameState.env[type] += amt; if(GameState.env[type] > limit) GameState.env[type] = limit; }
+            addAura: (p, type, amt) => { 
+                if(this.battleEnded) return; 
+                if(!p.aura) p.aura={};
+                if(!p.aura[type]) p.aura[type]=0; 
+                p.aura[type]+=amt; 
+                let pName = p === this.playerRef ? '少俠' : '敵人';
+                this.log(`✨ ${pName}獲得氣場：${type}`, "story-msg"); 
+            },
+            addEnv: (type, amt) => { 
+                if(this.battleEnded) return; 
+                let limit = Math.floor(StatEngine.getDerived(GameState.player).qiCap / 10); 
+                GameState.env[type] += amt; 
+                if(GameState.env[type] > limit) GameState.env[type] = limit; 
+            }
         };
     },
 
     updateCombatUI() {
         if (!this.battleEnded) {
-            // 委託 UI 模組更新畫面
             CombatUI.update(this.win, this.playerRef, this.enemyRef, this.ui);
         }
     },
 
+    // 讓環境傷害對雙方都進行結算
     triggerEnvDamage() {
         if (this.battleEnded) return;
         let dmgOccurred = false;
-        if (this.enemyRef.tags.fire > 0) { 
-            let b = this.enemyRef.tags.fire*30; this.enemyRef.hp-=b; this.log(`🔥 灼燒造成 ${b} 傷害。`, "dmg-msg"); 
-            CombatUI.showFloatingDamage('bat-target-enemy', b, b / this.enemyRef.maxHp);
-            dmgOccurred = true;
-        }
+
+        // 結算雙方身上的灼燒傷害
+        [this.enemyRef, this.playerRef].forEach(t => {
+            if (t.tags.fire > 0) {
+                let b = t.tags.fire * 30;
+                t.hp -= b;
+                let targetName = t === this.playerRef ? "少俠" : "敵人";
+                this.log(`🔥 灼燒對${targetName}造成 ${b} 傷害。`, "dmg-msg");
+                let cId = t === this.playerRef ? 'bat-target-player' : 'bat-target-enemy';
+                CombatUI.showFloatingDamage(cId, b, b / t.maxHp);
+                dmgOccurred = true;
+            }
+        });
+
         if (GameState.env.turret > 0) { 
             let t = GameState.env.turret*50; this.enemyRef.hp-=t; this.log(`🏹 連弩塔射擊造成 ${t} 傷害！`, "dmg-msg"); 
             CombatUI.showFloatingDamage('bat-target-enemy', t, t / this.enemyRef.maxHp);
             dmgOccurred = true;
         }
+
         if (dmgOccurred) {
             this.updateCombatUI();
             if (this.enemyRef.hp <= 0) this.endBattle(true);
+            else if (this.playerRef.hp <= 0) this.endBattle(false);
         }
     },
 
@@ -267,7 +294,7 @@ export const CombatSystem = {
 
         try {
             let derE = StatEngine.getDerived(this.enemyRef), derP = StatEngine.getDerived(GameState.player);
-            this.log(`[護法] 施展 ${skill.name}！`, "warn-msg");
+            this.log(`[敵方] 施展 ${skill.name}！`, "warn-msg");
             await this.performAttack(false, skill, derE, derP, this.enemyRef, this.playerRef);
         } finally {
             this.isExecuting = false;
@@ -278,23 +305,42 @@ export const CombatSystem = {
         }
     },
 
+    // 將氣場防禦機制對稱化，並加入連段 (Hit Combo) 結算
     async performAttack(isPlayer, skill, derAtk, derDef, attackerRef, targetRef) {
         if (this.battleEnded) return;
 
-        if (!isPlayer) {
-            if(this.playerRef.aura['木甲'] > 0) {
-                this.playerRef.aura['木甲'] -= 200; this.log(`🛡️ 神工木甲吸收了傷害！`, "story-msg");
-                if(this.playerRef.aura['木甲'] <= 0) { this.playerRef.aura['木甲']=0; this.log("💥 木甲損毀！"); } return;
-            }
-            if(this.playerRef.aura['疾風'] > 0) { this.playerRef.aura['疾風']--; this.log("💨 逍遙步絕對閃避！", "story-msg"); return; }
-            if(this.playerRef.aura['反擊'] > 0) { 
-                this.playerRef.aura['反擊']--; 
-                this.enemyRef.hp -= 300; 
-                this.log(`☯ 借力打力反彈傷害！`, "dmg-msg"); 
-                CombatUI.showFloatingDamage('bat-target-enemy', 300, 300 / this.enemyRef.maxHp);
-                if (this.enemyRef.hp <= 0) { this.updateCombatUI(); this.endBattle(true); }
-                return; 
-            }
+        // 共用防禦氣場判斷
+        if(targetRef.aura['木甲'] > 0) {
+            targetRef.aura['木甲'] -= 200; 
+            this.log(`🛡️ 神工木甲吸收了傷害！`, "story-msg");
+            if(targetRef.aura['木甲'] <= 0) { targetRef.aura['木甲']=0; this.log("💥 木甲損毀！"); } 
+            return;
+        }
+        if(targetRef.aura['疾風'] > 0) { 
+            targetRef.aura['疾風']--; 
+            this.log("💨 逍遙步絕對閃避！", "story-msg"); 
+            return; 
+        }
+        if(targetRef.aura['反擊'] > 0) { 
+            targetRef.aura['反擊']--; 
+            attackerRef.hp -= 300; 
+            this.log(`☯ 借力打力反彈傷害！`, "dmg-msg"); 
+            let cId = (attackerRef === this.enemyRef) ? 'bat-target-enemy' : 'bat-target-player';
+            CombatUI.showFloatingDamage(cId, 300, 300 / attackerRef.maxHp);
+            if (attackerRef.hp <= 0) { this.updateCombatUI(); this.endBattle(targetRef === this.playerRef); }
+            return; 
+        }
+
+        // 補上 DB_SKILLS 提到的「冰盾」與「絲陣」受擊反傷氣場效果
+        if(targetRef.aura['冰盾'] > 0) {
+            targetRef.aura['冰盾']--;
+            this.createContext(attackerRef, targetRef).addTag(attackerRef, 'ice', 1);
+            this.log(`❄️ 冰盾破碎，寒氣反噬了攻擊者！`, "story-msg");
+        }
+        if(targetRef.aura['絲陣'] > 0 && skill.type === 'phys') {
+            targetRef.aura['絲陣']--;
+            this.createContext(attackerRef, targetRef).addTag(attackerRef, 'silk', 1);
+            this.log(`🕸️ 盤絲舞動，絲線纏繞了近戰攻擊者！`, "warn-msg");
         }
 
         let dodgeChance = 20 + (derDef.dodge - derAtk.hit) * 1;
@@ -303,6 +349,9 @@ export const CombatSystem = {
 
         if (Math.random() * 100 < dodgeChance) {
             this.log(`殘影一閃，完全閃避了攻擊！`, "sys-msg");
+            // 閃避成功，攻擊者的連擊評價歸零
+            attackerRef.hitCombo = 0;
+            if (CombatUI.showHitCombo) CombatUI.showHitCombo(isPlayer, 0);
             return;
         }
 
@@ -336,7 +385,6 @@ export const CombatSystem = {
             let mult = 1;
             let skillTags = skill.tags || [];
             
-            // 使用新模組的資料庫進行反應判定
             for (let rule of DB_REACTIONS) {
                 if (rule.condition(skillTags, targetRef, GameState.env)) {
                     let bonusMult = rule.execute(targetRef, attackerRef, GameState.env, (m, c) => this.log(m, c));
@@ -367,6 +415,16 @@ export const CombatSystem = {
             targetRef.hp -= finalDmg;
             if (!isPlayer && finalDmg > 0 && !this.battleEnded) AvatarUI.playAction('hurt', true);
             
+            // 連段堆疊與結算
+            attackerRef.hitCombo = (attackerRef.hitCombo || 0) + 1; // 攻擊者疊加 Hit
+            targetRef.hitCombo = 0; // 受擊者因為受傷，連段歸零
+            
+            // 觸發 UI 畫面更新
+            if (CombatUI.showHitCombo) {
+                CombatUI.showHitCombo(isPlayer, attackerRef.hitCombo);
+                CombatUI.showHitCombo(!isPlayer, 0);
+            }
+
             let pctMaxHp = finalDmg / targetRef.maxHp;
             let containerId = isPlayer ? 'bat-target-enemy' : 'bat-target-player';
             
@@ -385,7 +443,8 @@ export const CombatSystem = {
             await new Promise(r => setTimeout(r, 200));
         }
     },
-endBattle(isWin) {
+    
+    endBattle(isWin) {
         if (this.battleEnded) return; 
         this.battleEnded = true;      
         clearInterval(this.interval);
@@ -397,7 +456,6 @@ endBattle(isWin) {
             
             GameState.player.exp += exp;
             
-            // 【新增】：處理敵人掉落的屬性點獎勵
             if (dropStats) {
                 let statsDict = { brawn:'臂力', physique:'根骨', qiCap:'內息', qiPot:'真元', agi:'身法', dex:'靈巧', per:'洞察', comp:'悟性' };
                 let gains = [];

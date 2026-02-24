@@ -402,3 +402,57 @@ body {
     50% { opacity: 1; transform: translate(-50%, -45px) scale(1.7); }
     100% { opacity: 0; transform: translate(-50%, -100px) scale(1.5) filter: blur(2px); }
 }
+
+/* ==========================================
+   武俠風連段特效 (Wuxia Style Combo Rating)
+   ========================================== */
+.wuxia-combo-container {
+    position: absolute;
+    pointer-events: none;
+    z-index: 1000;
+    display: none;
+    font-family: 'PMingLiU', 'MingLiU', '細明體', serif;
+}
+
+/* 整體字體縮小 */
+.wuxia-combo-count {
+    font-size: 16px; 
+    font-weight: bold;
+    letter-spacing: 2px;
+    color: #ffffff;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+}
+
+.wuxia-combo-rank {
+    font-size: 22px; 
+    font-weight: 900;
+    margin-top: 5px;
+    letter-spacing: 4px;
+}
+
+/* 移除所有改變 font-size 的設定，尺寸鎖死不變 */
+.combo-tier-1 { color: #cccccc; animation: wuxiaFadeIn 0.3s ease-out; }
+.combo-tier-2 { color: #55aaff; animation: wuxiaGlow 0.4s ease-out; text-shadow: 0 0 10px #55aaff; } 
+.combo-tier-3 { color: #ffff55; animation: wuxiaGlow 0.4s ease-out; text-shadow: 0 0 15px #ffff55; } 
+.combo-tier-4 { color: #ff5555; animation: wuxiaShake 0.3s ease-out; text-shadow: 0 0 20px #ff0000; } 
+.combo-tier-5 { color: #ff55aa; animation: wuxiaUltimate 0.5s ease-out infinite alternate; text-shadow: 0 0 25px #ff00ff; }
+
+/* 動畫全部拔除 scale() 放大效果，改為純粹的光影與平移震動 */
+@keyframes wuxiaFadeIn {
+    0% { opacity: 0; transform: translateY(5px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes wuxiaGlow {
+    0% { filter: brightness(2.5); }
+    100% { filter: brightness(1); }
+}
+@keyframes wuxiaShake {
+    0% { transform: translateX(-3px); filter: brightness(2); }
+    25% { transform: translateX(3px); }
+    50% { transform: translateX(-2px); }
+    100% { transform: translateX(0); filter: brightness(1); }
+}
+@keyframes wuxiaUltimate {
+    0% { filter: brightness(1) drop-shadow(0 0 5px #ff00ff); }
+    100% { filter: brightness(1.6) drop-shadow(0 0 15px #ffffff); }
+}

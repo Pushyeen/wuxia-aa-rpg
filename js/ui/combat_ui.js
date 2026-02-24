@@ -6,28 +6,47 @@ import { AvatarUI } from './avatar.js';
 export const CombatUI = {
     createWindow(eData) {
         let html = `
-            <div style="width: 520px; max-width: 100%; position: relative;"> 
+            <div style="width: 580px; max-width: 100%; position: relative;"> 
+                <div id="combo-display-p" class="wuxia-combo-container" style="left: 10px; top: 0px; text-align: left;">
+                    <div id="combo-count-p" class="wuxia-combo-count"></div>
+                    <div id="combo-rank-p" class="wuxia-combo-rank"></div>
+                </div>
+                
+                <div id="combo-display-e" class="wuxia-combo-container" style="right: 10px; top: 0px; text-align: right;">
+                    <div id="combo-count-e" class="wuxia-combo-count"></div>
+                    <div id="combo-rank-e" class="wuxia-combo-rank"></div>
+                </div>
+
                 <button id="bat-btn-flee" class="sys-btn" style="position:absolute; top:-35px; right:5px; background:#440000; border:2px outset #ff5555; color:#ffaaaa; padding:4px 12px; font-weight:bold;">🏃 嘗試逃跑</button>
-                <div class="battle-ui" style="display:flex; justify-content:space-between; align-items:flex-end; padding-top: 15px;">
+                
+                <div class="battle-ui" style="display:flex; justify-content:space-between; align-items:flex-end; padding-top: 25px;">
                     
                     <div id="bat-target-player" style="text-align:center; width:45%; position: relative;">
                         <div style="color:#ffaa55; font-weight:bold;">少俠</div>
                         <div class="bar-bg" style="margin: 0 auto;"><div id="bat-hp-p" class="bar-fill" style="width:100%;"></div></div>
                         <div class="bar-bg" style="margin: 2px auto 0; height:4px; border-color:#333;"><div id="bat-atb-p" class="bar-fill" style="background:#00aaff; width:0%;"></div></div>
                         <div class="bar-bg" style="margin: 4px auto 0; height:6px;"><div id="bat-combo-p" class="bar-fill" style="background:#cc55ff; width:100%; transition: width 0.2s;"></div></div>
-                        <div style="font-size:11px; color:#aaa;">連擊值: <span id="bat-combo-text">0</span></div>
+                        <div style="font-size:11px; color:#aaa;">氣力值: <span id="bat-combo-text">0</span></div>
                         <div id="bat-aa-p" style="display:flex; justify-content:center; margin-top:10px;">${AvatarUI.getCombatHTML()}</div>
-                        <div class="zone-box"><div class="zone-title">【自身氣場】</div><div id="bat-aura-content">- 無 -</div></div>
+                        <div class="zone-box">
+                            <div class="zone-title">【自身狀態】</div>
+                            <div id="bat-aura-p" style="margin-bottom: 4px; border-bottom: 1px dashed #333; padding-bottom: 2px;">- 無氣場 -</div>
+                            <div id="bat-tags-p">- 無印記 -</div>
+                        </div>
                     </div>
 
-                    <div style="font-size:24px; color:#555; font-weight:bold;">VS</div>
+                    <div style="font-size:24px; color:#555; font-weight:bold; margin-bottom: 40px; z-index: 10;">VS</div>
 
                     <div id="bat-target-enemy" style="text-align:center; width:45%; position: relative;">
                         <div style="color:#ff5555; font-weight:bold;">${eData.name}</div>
                         <div class="bar-bg" style="margin: 0 auto;"><div id="bat-hp-e" class="bar-fill" style="width:100%;"></div></div>
                         <div class="bar-bg" style="margin: 2px auto 0; height:4px; border-color:#333;"><div id="bat-atb-e" class="bar-fill" style="background:#ff8800; width:0%;"></div></div>
                         <pre class="aa-box" id="bat-aa-e" style="color:#ffaaaa; margin-top:22px;">${eData.aa}</pre>
-                        <div class="zone-box"><div class="zone-title">【目標印記】</div><div id="bat-target-content">- 無 -</div></div>
+                        <div class="zone-box">
+                            <div class="zone-title">【敵方狀態】</div>
+                            <div id="bat-aura-e" style="margin-bottom: 4px; border-bottom: 1px dashed #333; padding-bottom: 2px;">- 無氣場 -</div>
+                            <div id="bat-tags-e">- 無印記 -</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -53,18 +72,70 @@ export const CombatUI = {
         if (comboPEl) comboPEl.style.width = `${Math.max(0, (playerRef.currentCombo / Math.max(1, derP.comboMax)) * 100)}%`;
         if (comboTxt) comboTxt.innerText = `${playerRef.currentCombo} / ${derP.comboMax}`;
 
-        let tHtml = [];
-        if(enemyRef.tags.ice) tHtml.push(`<span class="tag ice">❄️ 寒氣 x${enemyRef.tags.ice}</span>`);
-        if(enemyRef.tags.fire) tHtml.push(`<span class="tag fire">🔥 炎勁 x${enemyRef.tags.fire}</span>`);
-        if(enemyRef.tags.silk) tHtml.push(`<span class="tag silk">🕸️ 絲線 x${enemyRef.tags.silk}</span>`);
-        if(enemyRef.tags.frozen) tHtml.push(`<span class="tag ice" style="box-shadow: 0 0 5px #aaddff;">🧊 冰封</span>`);
-        let tContent = document.getElementById('bat-target-content');
-        if (tContent) tContent.innerHTML = tHtml.join('') || '- 無 -';
+        const renderTags = (tags) => {
+            let html = [];
+            if(tags.ice) html.push(`<span class="tag ice">❄️ 寒氣 x${tags.ice}</span>`);
+            if(tags.fire) html.push(`<span class="tag fire">🔥 炎勁 x${tags.fire}</span>`);
+            if(tags.silk) html.push(`<span class="tag silk">🕸️ 絲線 x${tags.silk}</span>`);
+            if(tags.frozen) html.push(`<span class="tag ice" style="box-shadow: 0 0 5px #aaddff;">🧊 冰封</span>`);
+            return html.join('') || '- 無印記 -';
+        };
 
-        let aHtml = [];
-        for(let k in playerRef.aura) if(playerRef.aura[k] > 0) aHtml.push(`<span class="tag aura">✨ ${k} x${playerRef.aura[k]}</span>`);
-        let aContent = document.getElementById('bat-aura-content');
-        if (aContent) aContent.innerHTML = aHtml.join('') || '- 無 -';
+        const renderAuras = (auras) => {
+            let html = [];
+            for(let k in auras) {
+                if(auras[k] > 0) html.push(`<span class="tag aura">✨ ${k} x${auras[k]}</span>`);
+            }
+            return html.join('') || '- 無氣場 -';
+        };
+
+        let tagsP = document.getElementById('bat-tags-p');
+        if (tagsP) tagsP.innerHTML = renderTags(playerRef.tags);
+        let auraP = document.getElementById('bat-aura-p');
+        if (auraP) auraP.innerHTML = renderAuras(playerRef.aura);
+
+        let tagsE = document.getElementById('bat-tags-e');
+        if (tagsE) tagsE.innerHTML = renderTags(enemyRef.tags);
+        let auraE = document.getElementById('bat-aura-e');
+        if (auraE) auraE.innerHTML = renderAuras(enemyRef.aura);
+    },
+
+    // 負責管理武俠風格連段特效的觸發與清除
+    showHitCombo(isPlayer, count) {
+        let display = document.getElementById(isPlayer ? 'combo-display-p' : 'combo-display-e');
+        let countEl = document.getElementById(isPlayer ? 'combo-count-p' : 'combo-count-e');
+        let rankEl = document.getElementById(isPlayer ? 'combo-rank-p' : 'combo-rank-e');
+        
+        if (!display || !countEl || !rankEl) return;
+
+        // 連段中斷時直接隱藏
+        if (count === 0) {
+            display.style.display = 'none';
+            return;
+        }
+
+        display.style.display = 'block';
+        countEl.innerText = `${count} 連擊`; // 改用中文
+        
+        // 重置動畫 Class
+        countEl.className = 'wuxia-combo-count';
+        rankEl.className = 'wuxia-combo-rank';
+        
+        // 觸發瀏覽器 Reflow 以重新播放動畫
+        void countEl.offsetWidth;
+        
+        let rankText = "";
+        let tierClass = "combo-tier-1";
+        
+        // 改為武俠成語境界
+        if (count >= 50) { rankText = "天下無雙"; tierClass = "combo-tier-5"; }
+        else if (count >= 30) { rankText = "出神入化"; tierClass = "combo-tier-4"; }
+        else if (count >= 20) { rankText = "勢如破竹"; tierClass = "combo-tier-3"; }
+        else if (count >= 10) { rankText = "行雲流水"; tierClass = "combo-tier-2"; }
+        
+        rankEl.innerText = rankText;
+        countEl.classList.add(tierClass);
+        if (rankText) rankEl.classList.add(tierClass);
     },
 
     showFloatingDamage(containerId, dmg, pctMaxHp) {
