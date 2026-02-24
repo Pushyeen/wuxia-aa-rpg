@@ -7,6 +7,9 @@ export const CombatUI = {
     createWindow(eData) {
         let html = `
             <div style="width: 580px; max-width: 100%; position: relative;"> 
+                
+                <button id="bat-btn-mode" class="sys-btn" style="position:absolute; top:-35px; left:5px; border:2px outset #55ffff; color:#55ffff; padding:4px 12px; font-weight:bold;">模式: ${GameState.player.combatMode === 'auto' ? '自動' : '手動'}</button>
+
                 <div id="combo-display-p" class="wuxia-combo-container" style="left: 10px; top: 0px; text-align: left;">
                     <div id="combo-count-p" class="wuxia-combo-count"></div>
                     <div id="combo-rank-p" class="wuxia-combo-rank"></div>
@@ -53,6 +56,18 @@ export const CombatUI = {
                         </div>
                     </div>
                 </div>
+
+                <div id="manual-skill-menu" style="display:none; position:absolute; top:0; left:-245px; height:100%; width:240px; flex-direction: column; background:rgba(0,0,0,0.95); border:4px double #aaa; padding:15px 10px; z-index:100; text-align:center; box-sizing: border-box; box-shadow: -5px 0 15px rgba(0,0,0,0.8);">
+                    <div style="color:#ffff55; margin-bottom:12px; font-size:15px; flex-shrink: 0; font-weight: bold; border-bottom: 1px dashed #555; padding-bottom: 8px;">
+                        — 選擇招式 —
+                    </div>
+                    <div id="skill-list-container" style="display:flex; flex-direction: column; gap:8px; overflow-y:auto; flex: 1; padding: 2px 5px; align-items: stretch;">
+                    </div>
+                    <button class="sys-btn" id="btn-end-turn" style="margin-top:12px; width:100%; color:#ffaaaa; border-color:#ff5555; background:#440000; flex-shrink: 0; font-size: 14px; font-weight: bold; padding: 8px 0;">
+                        結束攻勢 / 暫停
+                    </button>
+                </div>
+
             </div>
         `;
         return WindowManager.create(`⚔️ 戰鬥交鋒`, html, true);
@@ -76,7 +91,6 @@ export const CombatUI = {
         if (comboPEl) comboPEl.style.width = `${Math.max(0, (playerRef.currentCombo / Math.max(1, derP.comboMax)) * 100)}%`;
         if (comboTxt) comboTxt.innerText = `${playerRef.currentCombo} / ${derP.comboMax}`;
 
-        // 👇 更新敵人的連擊氣力條
         let derE = StatEngine.getDerived(enemyRef);
         let comboEEl = document.getElementById('bat-combo-e'), comboTxtE = document.getElementById('bat-combo-text-e');
         if (comboEEl) comboEEl.style.width = `${Math.max(0, (enemyRef.currentCombo / Math.max(1, derE.comboMax)) * 100)}%`;
@@ -113,7 +127,6 @@ export const CombatUI = {
         if (auraE) auraE.innerHTML = renderAuras(enemyRef.aura);
     },
 
-    // 負責管理武俠風格連段特效的觸發與清除
     showHitCombo(isPlayer, count) {
         let display = document.getElementById(isPlayer ? 'combo-display-p' : 'combo-display-e');
         let countEl = document.getElementById(isPlayer ? 'combo-count-p' : 'combo-count-e');
@@ -121,7 +134,6 @@ export const CombatUI = {
         
         if (!display || !countEl || !rankEl) return;
 
-        // 連段中斷時直接隱藏
         if (count === 0) {
             display.style.display = 'none';
             return;
@@ -130,17 +142,14 @@ export const CombatUI = {
         display.style.display = 'block';
         countEl.innerText = `${count} 連擊`; 
         
-        // 重置動畫 Class
         countEl.className = 'wuxia-combo-count';
         rankEl.className = 'wuxia-combo-rank';
         
-        // 觸發瀏覽器 Reflow 以重新播放動畫
         void countEl.offsetWidth;
         
         let rankText = "";
         let tierClass = "combo-tier-1";
         
-        // 改為武俠成語境界
         if (count >= 50) { rankText = "天下無雙"; tierClass = "combo-tier-5"; }
         else if (count >= 30) { rankText = "出神入化"; tierClass = "combo-tier-4"; }
         else if (count >= 20) { rankText = "勢如破竹"; tierClass = "combo-tier-3"; }

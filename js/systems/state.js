@@ -8,7 +8,7 @@ export const GameState = {
     player: {
         x: 5, y: 5, lv: 1, exp: 9999, hp: 3000, maxHp: 3000, 
         poise: 100, maxPoise: 100, atb: 0,
-        combatMode: "auto", 
+        combatMode: "auto", // 新增：預設為自動模式，可選 "auto" 或 "manual"
         stats: { brawn: 10, physique: 10, qiCap: 10, qiPot: 10, agi: 10, dex: 10, per: 10, comp: 10, luck: 10 },
         equips: { weapon: null, armor: null, accessory: null },
         
