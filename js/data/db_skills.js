@@ -72,5 +72,120 @@ export const DB_SKILLS = {
     "mech_5": { name: "磁石牽引", tags: ["牽引"], type: "qi", power: 30, comboCost: 45, vfx: "taiji_circle", msg: "迫敵踩踏機關。" },
     "mech_6": { name: "神工木甲", tags: ["Aura"], type: "qi", power: 0, comboCost: 150, vfx: "dragon_strike", msg: "召喚護體巨木人。", onHit: (ctx) => ctx.attacker.aura['木甲'] = 1000 },
 
-    "s_enemy_slash": { name: "狂劈", tags: ["鈍"], type: "phys", power: 40, comboCost: 50, vfx: "heavy_slash", msg: "瘋狂劈砍", hits: 1 }
+    "s_enemy_slash": { name: "狂劈", tags: ["鈍"], type: "phys", power: 40, comboCost: 50, vfx: "heavy_slash", msg: "瘋狂劈砍", hits: 1 },
+
+    // 🔮 【策】系 Boss：天機居士·莫測 專屬武學
+    "e_ce_ask": { 
+        name: "起卦·問路", tags: ["策", "佈局"], type: "qi", power: 30, comboCost: 20, vfx: "taiji_circle", 
+        msg: "拋出銅錢卜卦，暗中佈下陣局。", 
+        // 命中後為自己附加 1 層 [卦象]
+        onHit: (ctx) => ctx.addAura(ctx.attacker, '卦象', 1) 
+    },
+    "e_ce_point": { 
+        name: "點穴·截脈", tags: ["策", "銳"], type: "phys", power: 50, comboCost: 30, vfx: "wind_sword", 
+        msg: "快如閃電的點穴，尋找死穴破綻。", 
+        // 必定在玩家身上附加 1 層 [死穴]
+        onHit: (ctx) => {
+            ctx.addTag(ctx.target, '死穴', 1);
+            ctx.log(`🎯 你的破綻被看穿了！(死穴 +1)`, 'warn-msg');
+        } 
+    },
+    "e_ce_chain": { 
+        name: "連環·抽絲", tags: ["策", "柔"], type: "phys", power: 20, comboCost: 40, vfx: "needle_rain", hits: 3, 
+        msg: "手中的絲線連續抽打，擾亂心神。", 
+        // 3段攻擊，每次都有 40% 機率附加 [死穴]
+        onHit: (ctx) => { 
+            if(Math.random() < 0.4) {
+                ctx.addTag(ctx.target, '死穴', 1); 
+                ctx.log(`🎯 防不勝防！(死穴 +1)`, 'warn-msg');
+            }
+        } 
+    },
+    "e_ce_delay": { 
+        name: "偷梁換柱", tags: ["策", "謀"], type: "qi", power: 10, comboCost: 50, vfx: "poison_cloud", 
+        msg: "身法變幻莫測，大幅干擾你的攻勢。", 
+        onHit: (ctx) => { 
+            ctx.target.wait = Math.max(0, ctx.target.wait - 35); 
+            ctx.log("🌀 幻象干擾，少俠的行動條倒退了！", "warn-msg"); 
+            ctx.addAura(ctx.attacker, '卦象', 1); 
+        } 
+    },
+    "e_ce_finish": { 
+        name: "天命·無常", tags: ["策", "識破", "銳"], type: "qi", power: 120, comboCost: 80, vfx: "dragon_strike", 
+        msg: "折扇化為利刃，直指必定死亡的命門！" 
+    },
+
+    // 🎶 【音】系 中階敵人：絕代名伶·幽蘭 專屬武學
+    "e_yl_tune": { 
+        name: "【調音】轉軸撥弦三兩聲", tags: ["音", "曲"], type: "qi", power: 10, comboCost: 15, vfx: "taiji_circle", 
+        msg: "未成曲調先有情。指尖輕撥，音波已然入耳。", 
+        onHit: (ctx) => {
+            ctx.addTag(ctx.target, '餘音', 1);
+            // 提速：為自己增加少許 ATB
+            ctx.attacker.wait = Math.min(100, ctx.attacker.wait + 20); 
+        } 
+    },
+    "e_yl_hide": { 
+        name: "【起手】猶抱琵琶半遮面", tags: ["音", "幻"], type: "qi", power: 0, comboCost: 20, vfx: "wind_sword", 
+        msg: "千呼萬喚始出來。幽蘭蓮步輕移，身形化為幻影。", 
+        onHit: (ctx) => {
+            ctx.addAura(ctx.attacker, '霓裳', 2); // 獲得兩次絕對閃避
+        } 
+    },
+    "e_yl_heavy": { 
+        name: "【急雨】大弦嘈嘈如急雨", tags: ["音", "鈍"], type: "qi", power: 60, comboCost: 30, vfx: "heavy_slash", hits: 1,
+        msg: "沉重的低音宛如悶雷，震盪少俠的五臟六腑！" 
+    },
+    "e_yl_light": { 
+        name: "【私語】小弦切切如私語", tags: ["音", "銳"], type: "qi", power: 25, comboCost: 30, vfx: "needle_rain", hits: 2,
+        msg: "尖銳的高音宛如利刃，切割著周遭的空氣。", 
+        onHit: (ctx) => ctx.addTag(ctx.target, '餘音', 1) 
+    },
+    "e_yl_pearls": { 
+        name: "【交錯】大珠小珠落玉盤", tags: ["音", "曲"], type: "qi", power: 15, comboCost: 40, vfx: "sword_rain", hits: 4,
+        msg: "嘈嘈切切錯雜彈！密集的音波如暴雨般傾瀉而下！", 
+        onHit: (ctx) => {
+            // 每一下都有 50% 機率疊加餘音
+            if(Math.random() < 0.5) ctx.addTag(ctx.target, '餘音', 1);
+        } 
+    },
+    "e_yl_silence": { 
+        name: "【幽恨】此時無聲勝有聲", tags: ["音", "迷亂"], type: "qi", power: 0, comboCost: 50, vfx: "poison_cloud", 
+        msg: "冰泉冷澀弦凝絕。曲聲驟停，令人感到窒息的壓抑感...", 
+        onHit: (ctx) => {
+            // 強制清空玩家的 ATB，為接下來的高潮做準備
+            ctx.target.wait = 0; 
+            ctx.log("🎵 萬籟俱寂，少俠的動作完全停滯了！", "warn-msg");
+        } 
+    },
+    "e_yl_burst": { 
+        name: "【破陣】銀瓶乍破水漿迸", tags: ["音", "歌", "共振"], type: "qi", power: 50, comboCost: 60, vfx: "fire_blast", hits: 3,
+        msg: "鐵騎突出碎紅纓！殺伐之音如同千軍萬馬奔騰而出！" 
+    },
+    "e_yl_finish": { 
+        name: "【裂帛】四弦一聲如裂帛", tags: ["音", "歌", "共振"], type: "qi", power: 150, comboCost: 80, vfx: "dragon_strike", hits: 1,
+        msg: "曲終收撥當心畫！幽蘭劃破琴弦，發出淒厲的致命音爆！" 
+    },
+    // ⚙️ 【道】系 首領：蜀中詭客·唐翎 專屬武學
+    "e_tl_reload": { 
+        name: "機關·森羅萬象", tags: ["道", "機"], type: "qi", power: 0, comboCost: 30, vfx: "taiji_circle", 
+        msg: "令人牙酸的機括聲響起，千機匣再次裝填完畢！", 
+        onHit: (ctx) => {
+            ctx.attacker.aura = ctx.attacker.aura || {};
+            ctx.attacker.aura['千機匣'] = 15; // 重新補滿 15 發彈藥
+        } 
+    },
+    "e_tl_poison": { 
+        name: "化學·幽藍毒霧", tags: ["道", "術"], type: "qi", power: 5, comboCost: 30, vfx: "poison_cloud", 
+        msg: "袖口噴出幽藍色的粉末，沾染在你的護甲上發出危險的滋滋聲。", 
+        onHit: (ctx) => ctx.addTag(ctx.target, '破甲毒', 1) 
+    },
+    "e_tl_gatling": { 
+        name: "暗器·追星趕月", tags: ["道", "機", "銳", "連動"], type: "phys", power: 10, comboCost: 40, vfx: "needle_rain", hits: 3, 
+        msg: "唐翎雙手化為殘影，無數閃爍著寒芒的暗器向你射來！" 
+    },
+    "e_tl_execute": { 
+        name: "絕殺·閻王三點手", tags: ["道", "銳", "催化"], type: "phys", power: 30, comboCost: 60, vfx: "wind_sword", hits: 1, 
+        msg: "唐翎如鬼魅般欺身向前，指尖夾著漆黑的毒針，直刺死穴！" 
+    }
 };

@@ -38,5 +38,30 @@ export const DB_SCRIPTS = {
         { type: "combat", enemyId: "e_boss_ice" },
         { type: "dialog", speaker: "系統", text: "經歷了一場生死血戰，你的武學造詣得到了飛躍性的昇華！" },
         { type: "remove_event" }
+    ],
+
+    // 隱藏 Boss：天機居士·莫測
+    'evt_fight_moce': [
+        { type: "dialog", speaker: "天機居士·莫測", text: "你的腳步虛浮，真氣散亂。在老夫的卦象中，你已是個死人。" },
+        { type: "dialog", speaker: "天機居士·莫測", text: "也罷，就讓老夫親自為你送行，免得你弄髒了這片江湖。" },
+        { type: "combat", enemyId: "e_boss_moce" }, // 呼叫之前設計好的敵人 ID
+        { type: "dialog", speaker: "系統", text: "你以力破巧，打破了必死的命局！在生死之間，你對「策」與「勢」的理解達到了全新的境界。" },
+        { type: "remove_event" } // 戰勝後將他從地圖上移除
+    ],
+    // 中階強敵：絕代名伶·幽蘭
+    'evt_fight_youlan': [
+        { type: "dialog", speaker: "絕代名伶·幽蘭", text: "公子請留步。良辰美景，何不聽奴家彈奏一曲《琵琶行》？" },
+        { type: "dialog", speaker: "絕代名伶·幽蘭", text: "只是奴家的琴音，歷來只獻給死人...公子，請品鑑。" },
+        { type: "combat", enemyId: "e_elite_youlan" }, // 觸發戰鬥
+        { type: "dialog", speaker: "系統", text: "一曲肝腸斷，天涯何處覓知音。你抵擋住了致命的連環魔音，對【音】系武學有了防備。" },
+        { type: "remove_event" } // 戰勝後將她從地圖上移除
+    ],
+    // 隱藏強敵：蜀中詭客·唐翎
+    'evt_fight_tang': [
+        { type: "dialog", speaker: "蜀中詭客·唐翎", text: "嘻嘻...又有新的實驗體送上門來了。" },
+        { type: "dialog", speaker: "蜀中詭客·唐翎", text: "放心，我的毒發作很快，你連痛苦都來不及感受就會化為血水。" },
+        { type: "combat", enemyId: "e_boss_tang" }, // 觸發戰鬥
+        { type: "dialog", speaker: "系統", text: "你在狂風驟雨般的暗器彈幕中尋得一絲破綻，成功擊破了千機匣！" },
+        { type: "remove_event" }
     ]
 };

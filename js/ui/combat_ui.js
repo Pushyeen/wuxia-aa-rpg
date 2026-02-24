@@ -78,6 +78,12 @@ export const CombatUI = {
             if(tags.fire) html.push(`<span class="tag fire">🔥 炎勁 x${tags.fire}</span>`);
             if(tags.silk) html.push(`<span class="tag silk">🕸️ 絲線 x${tags.silk}</span>`);
             if(tags.frozen) html.push(`<span class="tag ice" style="box-shadow: 0 0 5px #aaddff;">🧊 冰封</span>`);
+            // 👇 新增這行：讓「死穴」印記顯示在畫面上，並使用強烈的紫色警告玩家
+            if(tags['死穴']) html.push(`<span class="tag" style="color:#ff00ff; border-color:#ff00ff; box-shadow: 0 0 5px #ff00ff;">🎯 死穴 x${tags['死穴']}</span>`);
+            // 👇 新增這行：餘音印記 (使用優雅的青色)
+            if(tags['餘音']) html.push(`<span class="tag" style="color:#55ffff; border-color:#55ffff;">🎵 餘音 x${tags['餘音']}</span>`);
+            // 👇 新增這行：破甲毒 (使用危險的螢光綠色)
+            if(tags['破甲毒']) html.push(`<span class="tag" style="color:#aaffaa; border-color:#aaffaa; box-shadow: 0 0 5px #aaffaa;">☠️ 破甲毒 x${tags['破甲毒']}</span>`);
             return html.join('') || '- 無印記 -';
         };
 
