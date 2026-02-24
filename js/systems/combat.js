@@ -26,8 +26,14 @@ export const CombatSystem = {
             let eData = DB_ENEMIES[enemyId];
             if (!eData) return resolve();
 
-            // 雙方皆初始化 aura 氣場與 hitCombo 打擊數
-            this.enemyRef = { id: enemyId, hp: eData.hp, maxHp: eData.maxHp, wait: 0, stats: eData.stats, tags: {},aura: eData.aura ? { ...eData.aura } : {}, hitCombo: 0 };
+            // 雙方皆初始化 aura 氣場、連擊值與 hitCombo 打擊數
+            this.enemyRef = { 
+                id: enemyId, hp: eData.hp, maxHp: eData.maxHp, 
+                wait: 0, currentCombo: 0, // 新增初始化敵方連擊值
+                stats: eData.stats, tags: {}, 
+                aura: eData.aura ? { ...eData.aura } : {}, // 繼承開場氣場
+                hitCombo: 0 
+            };
             this.playerRef = { hp: GameState.player.hp, maxHp: GameState.player.maxHp, wait: 0, currentCombo: 0, aura: {}, tags: {}, hitCombo: 0 };
             GameState.env = { needles: 0, fire: 0, gears: 0, taichi: 0, turret: 0 };
             
@@ -199,8 +205,12 @@ export const CombatSystem = {
         
         if (this.enemyRef.wait >= 100) {
             this.enemyRef.wait = 0;
-            let skills = this.enemyRef.stats.skills || ["s_enemy_slash"];
-            this.executeEnemyAction(DB_SKILLS[skills[Math.floor(Math.random() * skills.length)]]);
+            // 敵人回合開始時，補滿連擊氣力值
+            this.enemyRef.currentCombo = derE.comboMax;
+            this.updateCombatUI();
+            
+            // 呼叫全新的敵方連擊函數
+            this.executeEnemyComboChain(derE, derP);
             return;
         }
     },
@@ -269,7 +279,7 @@ export const CombatSystem = {
 
                 let roll = Math.floor(Math.random() * 100) + 1;
                 if (roll > this.playerRef.currentCombo) {
-                    this.log(`【破綻】氣力不繼，收招退守。(判定：${roll} > 剩餘 ${this.playerRef.currentCombo})`, "warn-msg");
+                    this.log(`【破綻】氣力不繼，收招退守。(判定：${roll} > 剩餘 ${Math.floor(this.playerRef.currentCombo)})`, "warn-msg");
                     break; 
                 } else {
                     this.log(`⚡ 攻勢連綿不斷！馬上接續下一招！`, "sys-msg");
@@ -287,15 +297,105 @@ export const CombatSystem = {
         }
     },
 
-    async executeEnemyAction(skill) {
+    // 敵方全新的連段與 AI 決策系統
+    async executeEnemyComboChain(derE, derP) {
         if (this.isExecuting || this.battleEnded) return;
         this.isExecuting = true;
         clearInterval(this.interval); 
 
         try {
-            let derE = StatEngine.getDerived(this.enemyRef), derP = StatEngine.getDerived(GameState.player);
-            this.log(`[敵方] 施展 ${skill.name}！`, "warn-msg");
-            await this.performAttack(false, skill, derE, derP, this.enemyRef, this.playerRef);
+            // 只要雙方還活著，且敵人連擊條還沒因為破綻而中斷，就繼續攻擊
+            while (this.enemyRef.hp > 0 && this.playerRef.hp > 0 && !this.battleEnded) {
+                let skills = this.enemyRef.stats.skills || ["s_enemy_slash"];
+                let chosenSkillId = skills[Math.floor(Math.random() * skills.length)];
+
+                // === 敵方 AI 動態決策覆寫 ===
+                // 唐翎專屬 AI：若連段中途彈藥打光，立刻轉為裝填 (但不瞬間補滿，而是讓招式去補)
+                if (this.enemyRef.id === 'e_boss_tang') {
+                    let ammo = this.enemyRef.aura && this.enemyRef.aura['千機匣'] ? this.enemyRef.aura['千機匣'] : 0;
+                    if (ammo <= 0) {
+                        chosenSkillId = 'e_tl_reload'; 
+                        this.log("【千機匣空竭】唐翎被迫退守重新裝填！", "sys-msg");
+                    } else if (chosenSkillId === 'e_tl_reload') {
+                        chosenSkillId = 'e_tl_gatling'; 
+                    }
+                } 
+                // 武男專屬 AI：若連段中途境界疊滿 5 層，立刻打出大絕
+                else if (this.enemyRef.id === 'e_elite_wunan') {
+                    let chongtian = this.enemyRef.aura && this.enemyRef.aura['重天'] ? this.enemyRef.aura['重天'] : 0;
+                    if (chongtian >= 5) {
+                        chosenSkillId = 'e_wu_ult'; 
+                        this.log("⚡ 武男狂氣突破極限！釋放終極殺招！", "warn-msg");
+                    } else if (chosenSkillId === 'e_wu_ult') {
+                        chosenSkillId = 'e_wu_push';
+                    }
+                }
+                // 👇 新增：翩若專屬 AI (架勢切換與二階段判定)
+                else if (this.enemyRef.id === 'e_boss_pianruo') {
+                    // 初始化架勢與階段
+                    if (!this.enemyRef.stanceLevel) {
+                        this.enemyRef.stanceLevel = 1;
+                        this.enemyRef.stanceType = 'def'; // 開局守勢
+                        this.enemyRef.isPhase2 = false;
+                        if (!this.enemyRef.aura) this.enemyRef.aura = {};
+                        this.enemyRef.aura['游雲'] = 1; 
+                    }
+
+                    // 二階段判定：血量低於 50% 且架勢已達滿級 (4層)
+                    if (this.enemyRef.hp < this.enemyRef.maxHp * 0.5 && this.enemyRef.stanceLevel >= 4 && !this.enemyRef.isPhase2) {
+                        this.enemyRef.isPhase2 = true;
+                        this.enemyRef.aura = { '空之境界': 1 }; // 清空所有架勢，進入空之境界
+                        this.enemyRef.currentCombo = 400; // 賦予極高氣力以施展無限連擊
+                        this.log("「只要是活著的東西，就算是神也殺給你看。」翩若睜開了雙眼！", "warn-msg");
+                        if (this.win) this.win.classList.add('shake-effect');
+                    }
+
+                    if (this.enemyRef.isPhase2) {
+                        // 空之境界 (連擊模式)
+                        let p2Skills = ['e_pr_void_slash', 'e_pr_void_slash', 'e_pr_void_break'];
+                        // 若連擊氣力快耗盡，則以直死魔眼收尾
+                        if (this.enemyRef.currentCombo <= 120 && this.enemyRef.currentCombo >= 80) {
+                            chosenSkillId = 'e_pr_void_death';
+                        } else {
+                            chosenSkillId = p2Skills[Math.floor(Math.random() * p2Skills.length)];
+                        }
+                    } else {
+                        // 第一階段 (回合制切換模式，招式的 comboCost 會設定極高以強制斷連段)
+                        if (this.enemyRef.stanceType === 'def') {
+                            chosenSkillId = Math.random() < 0.5 ? 'e_pr_def_step' : 'e_pr_def_wind';
+                        } else {
+                            chosenSkillId = Math.random() < 0.5 ? 'e_pr_off_light' : 'e_pr_off_strike';
+                        }
+                    }
+                }
+                // 👆 翩若 AI 結束
+
+                let skill = DB_SKILLS[chosenSkillId];
+                if (!skill) break;
+
+                this.log(`[敵方] 施展 ${skill.name}！`, "warn-msg");
+                
+                // 執行攻擊 (由於 performAttack 是共用的，敵人也會正確結算動畫與傷害)
+                await this.performAttack(false, skill, derE, derP, this.enemyRef, this.playerRef);
+                
+                if (this.battleEnded) break; 
+
+                // 扣除氣力值並更新 UI
+                this.enemyRef.currentCombo -= (skill.comboCost || 20); // 預設扣 20 防止無限連段
+                this.updateCombatUI();
+
+                // 結算連擊破綻機率 (完全比照玩家邏輯)
+                let roll = Math.floor(Math.random() * 100) + 1;
+                if (roll > this.enemyRef.currentCombo) {
+                    this.log(`【敵方破綻】氣力不繼，攻勢暫歇。(判定：${roll} > 剩餘 ${Math.floor(this.enemyRef.currentCombo)})`, "sys-msg");
+                    break; 
+                } else {
+                    this.log(`⚡ 敵方攻勢連綿不斷！馬上接續下一招！`, "sys-msg");
+                    await new Promise(r => setTimeout(r, 200)); 
+                }
+            }
+        } catch (e) {
+            console.error("Combat Error: ", e);
         } finally {
             this.isExecuting = false;
             if (!this.battleEnded) {
@@ -307,8 +407,14 @@ export const CombatSystem = {
 
     // 將氣場防禦機制對稱化，並加入連段 (Hit Combo) 結算
     async performAttack(isPlayer, skill, derAtk, derDef, attackerRef, targetRef) {
-        if (this.battleEnded) return;
-
+        if (this.battleEnded) return;   
+        if(targetRef === this.enemyRef && targetRef.aura['蔽月'] > 0) {
+            targetRef.hp = Math.min(targetRef.maxHp, targetRef.hp + 50); // 翩若回血
+            attackerRef.hp -= 150; // 反彈傷害
+            this.log(`🌙 【蔽月】翩若柔化了攻勢，並反擊了 150 點傷害！`, "warn-msg"); 
+            CombatUI.showFloatingDamage('bat-target-player', 150, 150 / attackerRef.maxHp);
+            if (attackerRef.hp <= 0) { this.updateCombatUI(); this.endBattle(false); return; }
+        }
         // 共用防禦氣場判斷
         if(targetRef.aura['木甲'] > 0) {
             targetRef.aura['木甲'] -= 200; 
@@ -343,16 +449,19 @@ export const CombatSystem = {
             this.log(`🕸️ 盤絲舞動，絲線纏繞了近戰攻擊者！`, "warn-msg");
         }
 
-        let dodgeChance = 20 + (derDef.dodge - derAtk.hit) * 1;
-        if (targetRef.tags && targetRef.tags.frozen) dodgeChance = 0; 
-        dodgeChance = Math.max(0, Math.min(100, dodgeChance));
+        // 閃避判定：只有 power > 0 的招式（有傷害的）才會被閃避
+        if (skill.power > 0) {
+            let dodgeChance = 20 + (derDef.dodge - derAtk.hit) * 1;
+            if (targetRef.tags && targetRef.tags.frozen) dodgeChance = 0; 
+            dodgeChance = Math.max(0, Math.min(100, dodgeChance));
 
-        if (Math.random() * 100 < dodgeChance) {
-            this.log(`殘影一閃，完全閃避了攻擊！`, "sys-msg");
-            // 閃避成功，攻擊者的連擊評價歸零
-            attackerRef.hitCombo = 0;
-            if (CombatUI.showHitCombo) CombatUI.showHitCombo(isPlayer, 0);
-            return;
+            if (Math.random() * 100 < dodgeChance) {
+                this.log(`殘影一閃，完全閃避了攻擊！`, "sys-msg");
+                // 閃避成功，攻擊者的連擊評價歸零
+                attackerRef.hitCombo = 0;
+                if (CombatUI.showHitCombo) CombatUI.showHitCombo(isPlayer, 0);
+                return;
+            }
         }
 
         let hitCount = skill.hits || 1;
@@ -386,7 +495,8 @@ export const CombatSystem = {
             let skillTags = skill.tags || [];
             
             for (let rule of DB_REACTIONS) {
-                if (rule.condition(skillTags, targetRef, GameState.env)) {
+                // 傳入 attackerRef 作為第四個參數，讓連鎖反應能正確消耗攻擊者氣場
+                if (rule.condition(skillTags, targetRef, GameState.env, attackerRef)) {
                     let bonusMult = rule.execute(targetRef, attackerRef, GameState.env, (m, c) => this.log(m, c));
                     if (typeof bonusMult === 'number') mult *= bonusMult; 
                 }
@@ -397,42 +507,53 @@ export const CombatSystem = {
                  break; 
             }
 
-            let baseAtk = skill.type === 'phys' ? derAtk.pAtk : derAtk.qAtk;
-            let rawDmg = (baseAtk + skill.power) * (0.9 + Math.random() * 0.2) * mult;
+            let finalDmg = 0;
             
-            if (Math.random() * 100 < derAtk.critChance) {
-                rawDmg *= derAtk.critMult;
-                this.log(`💥 會心一擊！`, "dmg-msg");
-                if (this.win && !this.battleEnded) { this.win.classList.add('shake-effect'); setTimeout(() => {if(this.win) this.win.classList.remove('shake-effect');}, 200); }
+            // 只有 power > 0 的技能才計算傷害，避免裝填技顯示 0 傷害或觸發會心
+            if (skill.power > 0) {
+                let baseAtk = skill.type === 'phys' ? derAtk.pAtk : derAtk.qAtk;
+                let rawDmg = (baseAtk + skill.power) * (0.9 + Math.random() * 0.2) * mult;
+                
+                if (Math.random() * 100 < derAtk.critChance) {
+                    rawDmg *= derAtk.critMult;
+                    this.log(`💥 會心一擊！`, "dmg-msg");
+                    if (this.win && !this.battleEnded) { this.win.classList.add('shake-effect'); setTimeout(() => {if(this.win) this.win.classList.remove('shake-effect');}, 200); }
+                }
+
+                let fixDef = (targetRef.tags && targetRef.tags.frozen) ? 0 : derDef.fixDef;
+                let pctDef = (targetRef.tags && targetRef.tags.frozen) ? derDef.pctDef / 2 : derDef.pctDef;
+                // 👇 新增【芙蕖】護甲穿透
+                if (attackerRef.aura && attackerRef.aura['芙蕖'] > 0) {
+                    fixDef = 0; pctDef = 0;
+                    this.log(`🌸 【芙蕖】劍氣無視了所有防禦！`, "warn-msg");
+                }
+                
+                finalDmg = (rawDmg - fixDef) * (1 - pctDef / 100);
+                finalDmg = (rawDmg - fixDef) * (1 - pctDef / 100);
+                finalDmg = Math.max(1, Math.floor(finalDmg));
+
+                targetRef.hp -= finalDmg;
+                if (!isPlayer && finalDmg > 0 && !this.battleEnded) AvatarUI.playAction('hurt', true);
             }
-
-            let fixDef = (targetRef.tags && targetRef.tags.frozen) ? 0 : derDef.fixDef;
-            let pctDef = (targetRef.tags && targetRef.tags.frozen) ? derDef.pctDef / 2 : derDef.pctDef;
-
-            let finalDmg = (rawDmg - fixDef) * (1 - pctDef / 100);
-            finalDmg = Math.max(1, Math.floor(finalDmg));
-
-            targetRef.hp -= finalDmg;
-            if (!isPlayer && finalDmg > 0 && !this.battleEnded) AvatarUI.playAction('hurt', true);
             
             // 連段堆疊與結算
-            attackerRef.hitCombo = (attackerRef.hitCombo || 0) + 1; // 攻擊者疊加 Hit
-            targetRef.hitCombo = 0; // 受擊者因為受傷，連段歸零
+            attackerRef.hitCombo = (attackerRef.hitCombo || 0) + 1; 
+            targetRef.hitCombo = 0; 
             
-            // 觸發 UI 畫面更新
             if (CombatUI.showHitCombo) {
                 CombatUI.showHitCombo(isPlayer, attackerRef.hitCombo);
                 CombatUI.showHitCombo(!isPlayer, 0);
             }
 
-            let pctMaxHp = finalDmg / targetRef.maxHp;
-            let containerId = isPlayer ? 'bat-target-enemy' : 'bat-target-player';
-            
-            if (!this.battleEnded) CombatUI.showFloatingDamage(containerId, finalDmg, pctMaxHp);
+            if (finalDmg > 0) {
+                let pctMaxHp = finalDmg / targetRef.maxHp;
+                let containerId = isPlayer ? 'bat-target-enemy' : 'bat-target-player';
+                if (!this.battleEnded) CombatUI.showFloatingDamage(containerId, finalDmg, pctMaxHp);
+                this.log(`造成 ${finalDmg} 傷害。`, "sys-msg");
+            }
             
             if (skill.onHit) skill.onHit(this.createContext(attackerRef, targetRef));
 
-            this.log(`造成 ${finalDmg} 傷害。`, "sys-msg");
             this.updateCombatUI();
 
             if (targetRef.hp <= 0) {

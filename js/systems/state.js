@@ -80,7 +80,19 @@ export const StatEngine = {
             if (entity.internal.status.poisoned) { ext.pAtk -= 20; ext.fixDef -= 20; }
             if (entity.internal.status.injured) { ext.dodge -= 30; }
         }
-
+    // 👇 新增：讀取動態氣場 (Aura) 並轉化為基礎屬性加成
+        if (entity.aura) {
+            // 守之型
+            if (entity.aura['游雲']) ext.fixDef += 150;
+            if (entity.aura['迴雪']) ext.pctDef += 30; // 額外增加 30% 減傷
+            if (entity.aura['驚風']) ext.dodge += 80;
+            // 攻之型
+            if (entity.aura['驚鴻']) { ext.atbSpd += 30; ext.dex += 50; }
+            if (entity.aura['宛龍']) { ext.hit += 80; ext.pAtk += 150; }
+            if (entity.aura['耀日']) ext.critChance += 50;
+            // 空之境界 (二階段終極狀態)
+            if (entity.aura['空之境界']) { ext.comboMax += 500; ext.hit += 200; ext.pAtk += 100; ext.atbSpd += 50; }
+        }
         return {
             pAtk: Math.max(0, Math.floor(brawn * 2 + agi * 0.75 + dex * 0.75) + ext.pAtk),
             qAtk: Math.max(0, Math.floor(qiPot * 2 + qiCap * 1.5) + ext.qAtk),

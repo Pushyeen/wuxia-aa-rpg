@@ -41,6 +41,10 @@ export const CombatUI = {
                         <div style="color:#ff5555; font-weight:bold;">${eData.name}</div>
                         <div class="bar-bg" style="margin: 0 auto;"><div id="bat-hp-e" class="bar-fill" style="width:100%;"></div></div>
                         <div class="bar-bg" style="margin: 2px auto 0; height:4px; border-color:#333;"><div id="bat-atb-e" class="bar-fill" style="background:#ff8800; width:0%;"></div></div>
+                        
+                        <div class="bar-bg" style="margin: 4px auto 0; height:6px;"><div id="bat-combo-e" class="bar-fill" style="background:#cc55ff; width:100%; transition: width 0.2s;"></div></div>
+                        <div style="font-size:11px; color:#aaa;">氣力值: <span id="bat-combo-text-e">0</span></div>
+
                         <pre class="aa-box" id="bat-aa-e" style="color:#ffaaaa; margin-top:22px;">${eData.aa}</pre>
                         <div class="zone-box">
                             <div class="zone-title">【敵方狀態】</div>
@@ -72,17 +76,20 @@ export const CombatUI = {
         if (comboPEl) comboPEl.style.width = `${Math.max(0, (playerRef.currentCombo / Math.max(1, derP.comboMax)) * 100)}%`;
         if (comboTxt) comboTxt.innerText = `${playerRef.currentCombo} / ${derP.comboMax}`;
 
+        // 👇 更新敵人的連擊氣力條
+        let derE = StatEngine.getDerived(enemyRef);
+        let comboEEl = document.getElementById('bat-combo-e'), comboTxtE = document.getElementById('bat-combo-text-e');
+        if (comboEEl) comboEEl.style.width = `${Math.max(0, (enemyRef.currentCombo / Math.max(1, derE.comboMax)) * 100)}%`;
+        if (comboTxtE) comboTxtE.innerText = `${Math.floor(enemyRef.currentCombo)} / ${derE.comboMax}`;
+
         const renderTags = (tags) => {
             let html = [];
             if(tags.ice) html.push(`<span class="tag ice">❄️ 寒氣 x${tags.ice}</span>`);
             if(tags.fire) html.push(`<span class="tag fire">🔥 炎勁 x${tags.fire}</span>`);
             if(tags.silk) html.push(`<span class="tag silk">🕸️ 絲線 x${tags.silk}</span>`);
             if(tags.frozen) html.push(`<span class="tag ice" style="box-shadow: 0 0 5px #aaddff;">🧊 冰封</span>`);
-            // 👇 新增這行：讓「死穴」印記顯示在畫面上，並使用強烈的紫色警告玩家
             if(tags['死穴']) html.push(`<span class="tag" style="color:#ff00ff; border-color:#ff00ff; box-shadow: 0 0 5px #ff00ff;">🎯 死穴 x${tags['死穴']}</span>`);
-            // 👇 新增這行：餘音印記 (使用優雅的青色)
             if(tags['餘音']) html.push(`<span class="tag" style="color:#55ffff; border-color:#55ffff;">🎵 餘音 x${tags['餘音']}</span>`);
-            // 👇 新增這行：破甲毒 (使用危險的螢光綠色)
             if(tags['破甲毒']) html.push(`<span class="tag" style="color:#aaffaa; border-color:#aaffaa; box-shadow: 0 0 5px #aaffaa;">☠️ 破甲毒 x${tags['破甲毒']}</span>`);
             return html.join('') || '- 無印記 -';
         };
@@ -121,7 +128,7 @@ export const CombatUI = {
         }
 
         display.style.display = 'block';
-        countEl.innerText = `${count} 連擊`; // 改用中文
+        countEl.innerText = `${count} 連擊`; 
         
         // 重置動畫 Class
         countEl.className = 'wuxia-combo-count';

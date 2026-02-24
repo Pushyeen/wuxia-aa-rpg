@@ -1,6 +1,6 @@
 // js/systems/events.js
 import { WindowManager } from '../core/window_manager.js';
-import { GameState } from './state.js';
+import { GameState, StatEngine } from './state.js';
 import { DB_SCRIPTS } from '../data/db_scripts.js';
 import { DB_ITEMS } from '../data/db_items.js'; 
 
@@ -189,16 +189,16 @@ export const EventEngine = {
             };
         });
     },
-    
-    // 【新增】：擲骰視窗邏輯
+
+// 【修改】：擲骰視窗邏輯更新
     showRollStatsWindow() {
         return new Promise(resolve => {
-            // 擲骰函數：將各屬性設定為 5 ~ 30
+            // 擲骰函數：將各屬性設定為 1 ~ 100
             const roll = () => {
                 let stats = GameState.player.stats;
                 const attrKeys = ['brawn', 'physique', 'qiCap', 'qiPot', 'agi', 'dex', 'per', 'comp'];
                 attrKeys.forEach(k => {
-                    stats[k] = Math.floor(Math.random() * 26) + 5; 
+                    stats[k] = Math.floor(Math.random() * 100) + 1; 
                 });
                 return stats;
             };
@@ -220,7 +220,7 @@ export const EventEngine = {
                             <div style="width:40%; text-align:right;">洞察: <span style="color:#55ffff; font-weight:bold;">${currentStats.per}</span></div>
                             <div style="width:40%; text-align:left;">悟性: <span style="color:#55ffff; font-weight:bold;">${currentStats.comp}</span></div>
                         </div>
-                        <div style="margin-top: 15px; color: #888; font-size: 12px;">(單項屬性區間: 5 ~ 30)</div>
+                        <div style="margin-top: 15px; color: #888; font-size: 12px;">(單項屬性區間: 1 ~ 100)</div>
                         <div style="margin-top: 20px; display: flex; justify-content: space-around;">
                             <button class="sys-btn" id="btn-reroll" style="color:#ffaaaa; border-color:#ffaaaa; padding: 8px 16px;">🔄 逆天改命</button>
                             <button class="sys-btn" id="btn-confirm" style="color:#55ff55; border-color:#55ff55; padding: 8px 16px; font-weight:bold;">✅ 踏入江湖</button>
@@ -243,7 +243,17 @@ export const EventEngine = {
                 
                 win.querySelector('#btn-confirm').onclick = () => {
                     win.remove();
-                    if(this.ui) this.ui.render(); // 更新右側面板的屬性顯示
+                    
+                    if(this.ui) {
+                        // 確保先更新數值計算出新的最大生命值
+                        this.ui.updateStats(); 
+                        
+                        // 【關鍵修改】：將當前血量補滿至最大血量
+                        GameState.player.hp = GameState.player.maxHp; 
+                        
+                        // 重新渲染畫面使血量顯示正確
+                        this.ui.render(); 
+                    }
                     resolve();
                 };
             };

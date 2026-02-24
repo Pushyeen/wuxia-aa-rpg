@@ -131,5 +131,47 @@ export const DB_ENEMIES = {
             dropExp: 3500,
             dropStats: { dex: 3, agi: 3 }
         }
+    },
+    // 階級 3.5：中高階 (念系狂人，主打境界攀升與 DPS 檢定)
+    'e_elite_wunan': {
+        name: "狂海霸拳·武男",
+        hp: 9500, maxHp: 9500,
+        aa: `
+     .⚡.
+    ( ‵皿′)
+   / 霸  \\
+  💪     💪
+   /   \\`,
+        stats: {
+            // 極高的臂力與真元，展現純粹的破壞力
+            brawn: 60, physique: 40, qiCap: 30, qiPot: 50, agi: 25, dex: 25, per: 20, comp: 10, luck: 5,
+            equips: {}, 
+            // AI 抽招權重：高機率推動境界
+            skills: [
+                'e_wu_push', 'e_wu_push', 'e_wu_push', 'e_wu_push', // 推動境界
+                'e_wu_shark', 'e_wu_shark',                         // 狂鯊撕裂
+                'e_wu_whale', 'e_wu_whale',                         // 殺鯨霸拳
+                'e_wu_sword',                                       // 地獄之劍
+                'e_wu_heal',                                        // 細胞重組
+                'e_wu_roar',                                        // 霸王戰吼
+                'e_wu_ult'                                          // 海嘯爆破拳 (AI 底層控制)
+            ],
+            dropExp: 2000,
+            dropStats: { brawn: 3, qiPot: 2 } // 戰勝獎勵：臂力+3、真元+2
+        }
+    },
+    'e_boss_pianruo': {
+        name: "洛神絕劍·翩若",
+        hp: 20000, maxHp: 20000,
+        aa: `
+     .🌸.
+    ( - _ - )
+   /|  👘  |\\
+  🗡️      🗡️`,
+        stats: {
+            // 身法與靈巧極高，保證高迴避與極快的起手
+            brawn: 40, physique: 40, qiCap: 50, qiPot: 50, agi: 65, dex: 70, per: 60, comp: 60, luck: 50,
+            equips: {}, skills: [], dropExp: 10000, dropStats: { all: 5 }
+        }
     }
 };

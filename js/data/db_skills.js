@@ -1,5 +1,28 @@
 // js/data/db_skills.js
-
+const switchPianruoStance = (ctx) => {
+    let t = ctx.attacker;
+    if (t.isPhase2) return;
+    
+    // 清除舊架勢
+    ['游雲', '迴雪', '驚風', '蔽月', '驚鴻', '宛龍', '耀日', '芙蕖'].forEach(k => delete t.aura[k]);
+    
+    // 陣營反轉與數量遞增
+    if (t.stanceType === 'def') {
+        t.stanceType = 'off';
+    } else {
+        t.stanceType = 'def';
+        if (t.stanceLevel < 4) t.stanceLevel++; // 每次從攻轉守時，架勢數量 +1
+    }
+    
+    // 隨機抽取新架勢
+    let pool = t.stanceType === 'def' ? ['游雲', '迴雪', '驚風', '蔽月'] : ['驚鴻', '宛龍', '耀日', '芙蕖'];
+    pool.sort(() => Math.random() - 0.5);
+    let selected = pool.slice(0, t.stanceLevel);
+    selected.forEach(s => t.aura[s] = 1);
+    
+    let typeName = t.stanceType === 'def' ? '守之型' : '攻之型';
+    ctx.log(`✨ 翩若舞步變換，進入【${typeName}】！獲得架勢：${selected.join('、')}`, "story-msg");
+};
 export const DB_SKILLS = {
 
     // 【新增】：傳說中的野球拳
@@ -187,5 +210,94 @@ export const DB_SKILLS = {
     "e_tl_execute": { 
         name: "絕殺·閻王三點手", tags: ["道", "銳", "催化"], type: "phys", power: 30, comboCost: 60, vfx: "wind_sword", hits: 1, 
         msg: "唐翎如鬼魅般欺身向前，指尖夾著漆黑的毒針，直刺死穴！" 
-    }
+    },
+    // ⚡ 【念】系 中階敵人：狂海霸拳·武男 專屬武學
+    "e_wu_push": { 
+        name: "【元磁轉動】", tags: ["念", "運氣"], type: "qi", power: 0, comboCost: 20, vfx: "taiji_circle", 
+        msg: "武男瘋狂催動心臟，體內的元磁真氣發出震耳欲聾的轟鳴！", 
+        onHit: (ctx) => {
+            let current = ctx.attacker.aura['重天'] || 0;
+            if (current < 5) {
+                ctx.addAura(ctx.attacker, '重天', 1);
+            } else {
+                ctx.log("⚡ 武男的力量已經達到頂峰！", "warn-msg");
+            }
+            // 提速：額外增加 30 點 ATB，讓他越轉越快
+            ctx.attacker.wait = Math.min(100, ctx.attacker.wait + 30); 
+        } 
+    },
+    // ⚡ 【念】系 中階敵人：狂海霸拳·武男 專屬武學
+    "e_wu_shark": { 
+        name: "【狂鯊撕裂】", tags: ["勢", "銳", "狂"], type: "phys", power: 20, comboCost: 40, vfx: "wind_sword", hits: 3,
+        msg: "掌刀如狂鯊的利齒般瘋狂撕咬，斬出無數殘影！" 
+    },
+    "e_wu_whale": { 
+        name: "【殺鯨霸拳】", tags: ["勢", "鈍", "剛"], type: "phys", power: 80, comboCost: 50, vfx: "heavy_slash", hits: 1, poiseDmg: 80,
+        msg: "如同巨鯨擺尾般的狂暴重拳，誓要將你的骨頭一起踢碎！" 
+    },
+    "e_wu_sword": { 
+        name: "【地獄之劍】", tags: ["念", "銳"], type: "qi", power: 120, comboCost: 60, vfx: "sword_rain", hits: 1,
+        msg: "武男並指成劍，高度壓縮的元磁真氣化為熾熱利刃！" 
+    },
+    "e_wu_heal": { 
+        name: "【細胞重組】", tags: ["念", "化"], type: "qi", power: 0, comboCost: 40, vfx: "taiji_circle", 
+        msg: "「這種程度的傷，我的細胞瞬間就能重組啊！」",
+        onHit: (ctx) => {
+            let stacks = ctx.attacker.aura['重天'] || 0;
+            // 根據境界回血，每層恢復 5% 最大 HP
+            let heal = Math.floor(ctx.attacker.maxHp * 0.05 * stacks);
+            if (heal > 0) {
+                ctx.attacker.hp = Math.min(ctx.attacker.maxHp, ctx.attacker.hp + heal);
+                ctx.log(`🩸 肌肉飛速癒合，武男恢復了 ${heal} 點氣血！`, "story-msg");
+            } else {
+                ctx.log("境界不足，細胞重組效果微弱。", "sys-msg");
+            }
+        }
+    },
+    "e_wu_roar": { 
+        name: "【霸王戰吼】", tags: ["音", "歌", "狂"], type: "qi", power: 0, comboCost: 50, vfx: "strike", 
+        msg: "武男發出狂妄的咆哮：「給我跪下！！」",
+        onHit: (ctx) => {
+            // 強制擊退玩家 30 點行動條
+            ctx.target.wait = Math.max(0, ctx.target.wait - 30);
+            ctx.log("📢 強大的磁場音波震得少俠氣血翻湧，行動倒退！", "warn-msg");
+        }
+    },
+    "e_wu_ult": { 
+        name: "【五十萬匹·海嘯爆破拳】", tags: ["念", "心震", "重天"], type: "qi", power: 200, comboCost: 100, vfx: "dragon_strike", hits: 1,
+        msg: "「感受這五十萬匹的磁場轉動吧！給我碎！！」" 
+    },
+    // 🌸 終極首領：洛神絕劍·翩若 專屬武學
+    // 第一階段 (comboCost 設為 999，確保一回合只打一招)
+    "e_pr_def_step": { 
+        name: "【洛水·微步】", tags: ["勢"], type: "qi", power: 10, comboCost: 999, vfx: "taiji_circle", 
+        msg: "翩若輕踏罡步，身形若隱若現。", onHit: switchPianruoStance 
+    },
+    "e_pr_def_wind": { 
+        name: "【洛水·流風】", tags: ["勢"], type: "qi", power: 0, comboCost: 999, vfx: "wind_sword", 
+        msg: "劍氣如迴風般流轉，大幅打亂了你的節奏！", 
+        onHit: (ctx) => { ctx.target.wait = Math.max(0, ctx.target.wait - 50); switchPianruoStance(ctx); } 
+    },
+    "e_pr_off_light": { 
+        name: "【神光·離合】", tags: ["勢", "銳"], type: "phys", power: 40, comboCost: 999, vfx: "sword_rain", hits: 3,
+        msg: "如神光乍現的連環刺擊！", onHit: switchPianruoStance 
+    },
+    "e_pr_off_strike": { 
+        name: "【神光·飛鳧】", tags: ["勢", "銳", "鈍"], type: "phys", power: 120, comboCost: 999, vfx: "heavy_slash", hits: 1, poiseDmg: 80,
+        msg: "長劍夾帶驚人的威勢當頭劈下！", onHit: switchPianruoStance 
+    },
+
+    // 第二階段 (空之境界，極限連擊)
+    "e_pr_void_slash": { 
+        name: "【無明·閃】", tags: ["勢", "銳", "空"], type: "phys", power: 50, comboCost: 35, vfx: "wind_sword", hits: 1,
+        msg: "毫無軌跡可言的死之斬擊！" 
+    },
+    "e_pr_void_break": { 
+        name: "【伽藍·碎】", tags: ["破勢", "空"], type: "qi", power: 60, comboCost: 45, vfx: "strike", hits: 1,
+        msg: "刀刃準確地切開了防禦的接縫處！" 
+    },
+    "e_pr_void_death": { 
+        name: "【直死·境界式】", tags: ["直死", "空"], type: "phys", power: 150, comboCost: 100, vfx: "dragon_strike", hits: 1,
+        msg: "雙眸閃爍出幽藍色的光芒，劍鋒直指萬物的死線！" 
+    },
 };

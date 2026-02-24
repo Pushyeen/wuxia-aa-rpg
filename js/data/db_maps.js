@@ -5,7 +5,7 @@ export const DB_MAPS = {
         width: 25, height: 15,
         matrix: [
             "#########################",
-            "#.......#...........#...#",
+            "#8......#...........#...#",
             "#.T.....#..4........#...#",
             "#.......#...........#...#",
             "####.##########.#####...#",
@@ -16,7 +16,7 @@ export const DB_MAPS = {
             "#.............#.........#",
             "###############.#########",
             "#.......................#",
-            "#.......................#",
+            "#...........7...........#",
             "#.......................#",
             "#########################"
         ],
@@ -29,7 +29,9 @@ export const DB_MAPS = {
             '3': { type: 'event', char: '護', color: '#ff0000' },
             '4': { type: 'event', char: '測', color: '#cc55ff' },
             '5': { type: 'event', char: '蘭', color: '#ff77aa' },
-            '6': { type: 'event', char: '翎', color: '#aaffaa' } // <-- 唐翎，使用幽綠色代表毒藥
+            '6': { type: 'event', char: '翎', color: '#aaffaa' },
+            '7': { type: 'event', char: '武', color: '#ffaa00' }, // <-- 武男
+            '8': { type: 'event', char: '若', color: '#ffffff' } // 白色的洛神
         },
         events: {
             "2,2": "evt_npc_blacksmith",
@@ -38,7 +40,9 @@ export const DB_MAPS = {
             "12,8": "evt_fight_boss",
             "11,2": "evt_fight_moce",
             "2,6": "evt_fight_youlan",
-            "22,6": "evt_fight_tang" // <-- 綁定唐翎的遭遇事件
+            "22,6": "evt_fight_tang", // <-- 綁定唐翎的遭遇事件
+            "13,12": "evt_fight_wunan", // <-- 綁定事件
+            "1,1": "evt_fight_pianruo" // 地圖左上角
         }
     }
 };

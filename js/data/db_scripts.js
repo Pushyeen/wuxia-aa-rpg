@@ -63,5 +63,20 @@ export const DB_SCRIPTS = {
         { type: "combat", enemyId: "e_boss_tang" }, // 觸發戰鬥
         { type: "dialog", speaker: "系統", text: "你在狂風驟雨般的暗器彈幕中尋得一絲破綻，成功擊破了千機匣！" },
         { type: "remove_event" }
-    ]
+    ],
+    // 中高階強敵：狂海霸拳·武男
+    'evt_fight_wunan': [
+        { type: "dialog", speaker: "狂海霸拳·武男", text: "這種無聊的江湖...沒有人能讓我發揮真正的力量嗎！？" },
+        { type: "dialog", speaker: "狂海霸拳·武男", text: "小子，你的眼神不錯。希望能逼出我的五十萬匹力量啊！！" },
+        { type: "combat", enemyId: "e_elite_wunan" }, // 觸發戰鬥
+        { type: "dialog", speaker: "系統", text: "你以驚人的爆發力擊碎了武男的元磁真氣！你對【念】系武學有了更深的體悟。" },
+        { type: "remove_event" }
+    ],
+    // 最終Boss
+    'evt_fight_pianruo': [
+        { type: "dialog", speaker: "洛神絕劍·翩若", text: "萬物皆有其律動。你的劍，能跟上我的舞步嗎？" },
+        { type: "combat", enemyId: "e_boss_pianruo" },
+        { type: "dialog", speaker: "系統", text: "你跨越了生死的境界，戰勝了那雙看透死線的眼眸！" },
+        { type: "remove_event" }
+    ],
 };
