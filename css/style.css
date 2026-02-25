@@ -400,7 +400,7 @@ body {
     15% { transform: translate(-50%, -50px) scale(2.0); filter: brightness(2); }
     30% { transform: translate(-50%, -40px) scale(1.6); filter: brightness(1); }
     50% { opacity: 1; transform: translate(-50%, -45px) scale(1.7); }
-    100% { opacity: 0; transform: translate(-50%, -100px) scale(1.5) filter: blur(2px); }
+    100% { opacity: 0; transform: translate(-50%, -100px) scale(1.5); filter: blur(2px); }
 }
 
 /* ==========================================

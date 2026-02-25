@@ -2,6 +2,7 @@
 import { WindowManager } from '../core/window_manager.js';
 import { GameState, StatEngine } from '../systems/state.js';
 import { AvatarUI } from './avatar.js';
+import { DB_SKILLS } from '../data/db_skills.js';
 
 export const CombatUI = {
     createWindow(eData) {
@@ -181,5 +182,69 @@ export const CombatUI = {
 
         container.appendChild(el);
         setTimeout(() => { if (el) el.remove(); }, 1500);
+    },
+// 【新增】：封裝手動選單的 DOM 渲染與事件綁定，並回傳 Promise
+    showManualMenu(playerRef) {
+        return new Promise(resolve => {
+            const menu = document.getElementById('manual-skill-menu');
+            const list = document.getElementById('skill-list-container');
+            const endBtn = document.getElementById('btn-end-turn');
+
+            if (!menu || !list || !endBtn) return resolve(null);
+
+            // 清空先前的按鈕
+            list.innerHTML = '';
+            
+            let skills = GameState.player.activeSkills;
+            if (!skills || skills.length === 0) {
+                // 如果沒招式可用，直接回傳 null 結束回合
+                return resolve(null);
+            }
+
+            // 渲染招式按鈕
+            skills.forEach(skId => {
+                let sk = DB_SKILLS[skId];
+                if (!sk) return;
+
+                let failRate = Math.max(0, Math.floor((1 - (playerRef.currentCombo / 100)) * 100));
+                let btn = document.createElement('button');
+                btn.className = 'sys-btn';
+                btn.style.width = '100%'; 
+                btn.style.padding = '6px';
+                btn.style.textAlign = 'left';
+                
+                btn.innerHTML = `
+                    <div style="font-size:14px; margin-bottom:2px;">${sk.name}</div>
+                    <div style="font-size:11px; color:#888; text-align:right;">氣力:${sk.comboCost} | 破綻:${failRate}%</div>
+                `;
+                
+                // 氣力不足時反灰禁用
+                if (playerRef.currentCombo < sk.comboCost) {
+                    btn.disabled = true;
+                    btn.style.opacity = '0.5';
+                    btn.style.cursor = 'not-allowed';
+                }
+
+                btn.onclick = () => {
+                    // 點擊後，將選擇的技能 ID 傳回給邏輯層
+                    resolve(skId);
+                };
+                list.appendChild(btn);
+            });
+
+            endBtn.onclick = () => {
+                // 點擊結束回合，傳回 null
+                resolve(null);
+            };
+
+            // 顯示選單
+            menu.style.display = 'flex';
+        });
+    },
+
+    // 【新增】：隱藏手動選單
+    hideManualMenu() {
+        const menu = document.getElementById('manual-skill-menu');
+        if (menu) menu.style.display = 'none';
     }
 };

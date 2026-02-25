@@ -2,19 +2,29 @@
 import { DB_SKILLS } from './db_skills.js';
 import { DB_INTERNAL } from './db_internal.js';
 export const DB_ITEMS = {
-// 【無字天書·武學篇】
+// 【無字天書·武學篇】 (開發者測試版)
     'book_all_skills': {
-        name: "【無字天書·武學篇】", type: "consumable", desc: "記載了世間所有武功的奇書。使用後學會所有外功武學。",
+        name: "【無字天書·武學篇】", type: "consumable", desc: "測試用：學習世間所有武功（包含敵方與Boss專屬技能）。",
         action: (p, logger) => {
             let count = 0;
             for (let key in DB_SKILLS) {
-                // 排除敵人的專屬技能，並檢查是否已學會
-                if (!key.startsWith('s_enemy') && !p.skills.includes(key)) {
+                // 不再排除任何技能，只要還沒學過就全部塞進技能庫
+                if (!p.skills.includes(key)) {
                     p.skills.push(key);
                     count++;
                 }
+                
+                // 【防崩潰機制】：幫沒有敘述的 Boss 技能動態補上文字，避免打開武學面板時白屏
+                if (!DB_SKILLS[key].desc) {
+                    DB_SKILLS[key].desc = "【測試/敵方技能】開發者測試專用招式，可能有特殊判定。";
+                }
+                
+                // 如果該技能連分類 (type) 都沒有，預設給予外功 (phys) 以免 UI 排版出錯
+                if (!DB_SKILLS[key].type) {
+                    DB_SKILLS[key].type = "phys";
+                }
             }
-            if (logger) logger.add(`✅ 翻閱無字天書，瞬間領悟了 ${count} 種武學招式！`, "story-msg");
+            if (logger) logger.add(`✅ 測試模式：已強制學會 ${count} 種武學（含Boss專屬）！`, "story-msg");
         }
     },
     

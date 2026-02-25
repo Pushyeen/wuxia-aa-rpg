@@ -119,13 +119,21 @@ const TabSkill = {
         if (p.skills.length === 0) return `<div style="color:#888; text-align:center; margin-top: 20px;">目前尚未學會任何武功。</div>`;
         
         let categories = { '全部': [], '拳掌': [], '劍法': [], '暗器': [], '其他': [] };
+        
         p.skills.forEach(skillId => {
             let sk = DB_SKILLS[skillId];
             if (!sk) return;
+            
+            // 【防呆 1】：確保 tags 與 name 必定存在
+            let tags = sk.tags || []; 
+            let skillName = sk.name || "未知招式";
+            
             categories['全部'].push(skillId);
-            if (sk.tags.includes('鈍') || sk.name.includes('拳') || sk.name.includes('掌')) categories['拳掌'].push(skillId);
-            else if (sk.tags.includes('劍') || sk.tags.includes('銳') || sk.name.includes('劍')) categories['劍法'].push(skillId);
-            else if (sk.tags.includes('牽引') || sk.name.includes('針')) categories['暗器'].push(skillId);
+            
+            // 安全地使用 tags.includes
+            if (tags.includes('鈍') || skillName.includes('拳') || skillName.includes('掌')) categories['拳掌'].push(skillId);
+            else if (tags.includes('劍') || tags.includes('銳') || skillName.includes('劍')) categories['劍法'].push(skillId);
+            else if (tags.includes('牽引') || skillName.includes('針')) categories['暗器'].push(skillId);
             else categories['其他'].push(skillId);
         });
 
@@ -148,10 +156,18 @@ const TabSkill = {
             let skill = DB_SKILLS[skillId];
             let isActive = p.activeSkills.includes(skillId);
             let bgStyle = isActive ? 'background:#000044;' : 'transparent';
-            let tagsHtml = skill.tags.map(t => {
+            
+            // 【防呆 2】：安全渲染標籤
+            let tags = skill.tags || [];
+            let tagsHtml = tags.map(t => {
                 let cls = ''; if(t==='寒')cls='ice'; else if(t==='炎')cls='fire'; else if(t==='鈍')cls='blunt'; else if(t==='風')cls='wind'; else if(t==='牽引')cls='pull'; else if(t==='佈置')cls='trap'; else if(t==='絲線')cls='silk'; else if(t==='柔')cls='soft'; else if(t==='Aura')cls='aura';
                 return `<span class="tag ${cls}">${t}</span>`;
             }).join('');
+
+            // 【防呆 3】：相容 msg 與 desc，並給予數值預設值
+            let description = skill.desc || skill.msg || '無詳細說明';
+            let cost = skill.comboCost || 0;
+            let pwr = skill.power || 0;
 
             html += `<div class="list-item" style="flex-wrap:wrap; ${bgStyle}">
                         <div style="width: 50%; color:${isActive ? '#55ffff' : '#888888'}; font-weight:bold;">
@@ -162,7 +178,7 @@ const TabSkill = {
                             <button class="sys-btn action-preview-vfx" style="border-color:#ffff55; color:#ffff55;" data-vfx="${skill.vfx}">展演</button>
                         </div>
                         <div style="width:100%; margin-top:4px;">${tagsHtml}</div>
-                        <div style="width:100%; font-size:12px; color:#888; margin-top:2px;">連擊消耗:${skill.comboCost} | 威力:${skill.power} | ${skill.msg}</div>
+                        <div style="width:100%; font-size:12px; color:#888; margin-top:2px;">連擊消耗:${cost} | 威力:${pwr} | ${description}</div>
                      </div>`;
         });
         return html;

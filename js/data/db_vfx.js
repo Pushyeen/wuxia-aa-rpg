@@ -20,5 +20,48 @@ export const VFX_DB = {
     // 9. 太極劍圈 (慢速漂浮、黑白相間)
     "taiji_circle": { count: 20, duration: 60, behavior: "float_up", speed: 1, spread: 40, chars: ["☯", "柔", "化", "轉", "〇"], colors: ["#ffffff", "#cccccc", "#555555", "#000000"], scaleCurve: { 0.0: 1.0, 0.5: 2.0, 1.0: 0.5 }, shadow: true },
     // 10. 暴雨飛針 (天降、極密集、細小)
-    "needle_rain": { count: 60, duration: 25, behavior: "rain", speed: 28, spread: 120, chars: ["|", "針", "刺", "."], colors: ["#dddddd", "#aaaaaa", "#555555"], scaleCurve: { 0.0: 0.3, 0.5: 0.8, 1.0: 0.1 }, shadow: false }
+    "needle_rain": { count: 60, duration: 25, behavior: "rain", speed: 28, spread: 120, chars: ["|", "針", "刺", "."], colors: ["#dddddd", "#aaaaaa", "#555555"], scaleCurve: { 0.0: 0.3, 0.5: 0.8, 1.0: 0.1 }, shadow: false },
+    // ==========================================
+    // 翩若 (洛神絕劍) 專屬 VFX 動畫
+    // ==========================================
+    
+    // 1. 游雲 / 蔽月 (防禦端太極八卦陣)
+    'pr_bagua': [
+        "  ☲  \n☱   ☴\n  ☵  ",
+        "  ☴  \n☲   ☶\n  ☱  ",
+        "  ☶  \n☴   ☳\n  ☲  ",
+        "   ☯   ",
+        "       "
+    ],
+
+    // 2. 驚鴻 / 游龍 (攻擊端華麗劍舞)
+    'pr_sword_dance': [
+        "   /   ",
+        "  / ~  ",
+        " / ~ / ",
+        "~ / ~ /",
+        " / ~ / ",
+        "  / ~  ",
+        "       "
+    ],
+
+    // 3. 空之境界 (空間碎裂的狂暴連斬)
+    'pr_void_shatter': [
+        "   .   ",
+        "  \\|/  ",
+        " --X-- ",
+        "  /|\\  ",
+        " ╬ ╳ ╬ ",
+        "       "
+    ],
+
+    // 4. 空之境界·直死 (斬斷死線的終結技)
+    'pr_death_line': [
+        "     -     ",
+        "   --+--   ",
+        " ────┼──── ",
+        "═════╪═════",
+        "───────────",
+        "           "
+    ],
 };

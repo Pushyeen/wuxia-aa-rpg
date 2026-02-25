@@ -106,7 +106,7 @@ export const DB_ENEMIES = {
             dropStats: { agi: 2, dex: 1 } // 戰勝獎勵：身法+2、靈巧+1
         }
     },
-    // 階級 4：極強 (道系機關首領，主打彈藥管理與即時真傷)
+// 階級 4：極強 (道系機關首領，主打彈藥管理與即時真傷)
     'e_boss_tang': {
         name: "蜀中詭客·唐翎",
         hp: 12000, maxHp: 12000,
@@ -116,62 +116,155 @@ export const DB_ENEMIES = {
     ( ◓ _ ◓ )
     /| [匣] |\\
      |__|__|__|`,
-        // 🌟 關鍵機制：開戰即滿狀態，自帶 15 層千機匣彈藥！
         aura: { '千機匣': 15 }, 
         stats: {
-            // 極高的身法與靈巧
             brawn: 15, physique: 10, qiCap: 25, qiPot: 35, agi: 65, dex: 60, per: 45, comp: 40, luck: 20,
             equips: {}, 
             skills: [
-                'e_tl_reload', // 裝填 (空檔期)
-                'e_tl_poison', 'e_tl_poison', // 上毒
-                'e_tl_gatling', 'e_tl_gatling', 'e_tl_gatling', // 主要輸出
-                'e_tl_execute' // 終極引爆
+                'e_tl_reload', 'e_tl_poison', 'e_tl_poison', 
+                'e_tl_gatling', 'e_tl_gatling', 'e_tl_gatling', 'e_tl_execute'
             ],
             dropExp: 3500,
-            dropStats: { dex: 3, agi: 3 }
+            dropStats: { dex: 3, agi: 3 },
+            // 【新增】：唐翎專屬 AI 邏輯
+            aiScript: (enemyRef, defaultSkillId, combat) => {
+                let ammo = enemyRef.aura && enemyRef.aura['千機匣'] ? enemyRef.aura['千機匣'] : 0;
+                if (ammo <= 0) {
+                    combat.log("【千機匣空竭】唐翎被迫退守重新裝填！", "sys-msg");
+                    return 'e_tl_reload'; 
+                } else if (defaultSkillId === 'e_tl_reload') {
+                    return 'e_tl_gatling'; 
+                }
+                return defaultSkillId;
+            }
         }
     },
+
     // 階級 3.5：中高階 (念系狂人，主打境界攀升與 DPS 檢定)
     'e_elite_wunan': {
         name: "狂海霸拳·武男",
         hp: 9500, maxHp: 9500,
-        aa: `
-     .⚡.
-    ( ‵皿′)
-   / 霸  \\
-  💪     💪
-   /   \\`,
+        // ... (aa 與 stats 基礎數值保持不變) ...
         stats: {
-            // 極高的臂力與真元，展現純粹的破壞力
             brawn: 60, physique: 40, qiCap: 30, qiPot: 50, agi: 25, dex: 25, per: 20, comp: 10, luck: 5,
             equips: {}, 
-            // AI 抽招權重：高機率推動境界
             skills: [
-                'e_wu_push', 'e_wu_push', 'e_wu_push', 'e_wu_push', // 推動境界
-                'e_wu_shark', 'e_wu_shark',                         // 狂鯊撕裂
-                'e_wu_whale', 'e_wu_whale',                         // 殺鯨霸拳
-                'e_wu_sword',                                       // 地獄之劍
-                'e_wu_heal',                                        // 細胞重組
-                'e_wu_roar',                                        // 霸王戰吼
-                'e_wu_ult'                                          // 海嘯爆破拳 (AI 底層控制)
+                'e_wu_push', 'e_wu_push', 'e_wu_push', 'e_wu_push', 
+                'e_wu_shark', 'e_wu_shark', 'e_wu_whale', 'e_wu_whale', 
+                'e_wu_sword', 'e_wu_heal', 'e_wu_roar', 'e_wu_ult'
             ],
             dropExp: 2000,
-            dropStats: { brawn: 3, qiPot: 2 } // 戰勝獎勵：臂力+3、真元+2
+            dropStats: { brawn: 3, qiPot: 2 },
+            // 【新增】：武男專屬 AI 邏輯
+            aiScript: (enemyRef, defaultSkillId, combat) => {
+                let chongtian = enemyRef.aura && enemyRef.aura['重天'] ? enemyRef.aura['重天'] : 0;
+                if (chongtian >= 5) {
+                    combat.log("⚡ 武男狂氣突破極限！釋放終極殺招！", "warn-msg");
+                    return 'e_wu_ult'; 
+                } else if (defaultSkillId === 'e_wu_ult') {
+                    return 'e_wu_push';
+                }
+                return defaultSkillId;
+            }
         }
     },
+
+ // js/data/db_enemies.js (翩若區塊片段)
+
     'e_boss_pianruo': {
         name: "洛神絕劍·翩若",
         hp: 20000, maxHp: 20000,
+        // 【補回】：第一階段（冷靜/防守姿態）的 AA 立繪
         aa: `
-     .🌸.
-    ( - _ - )
-   /|  👘  |\\
-  🗡️      🗡️`,
+      .----.
+     / \\__/ \\
+    (  ~ _ ~ )
+      \\|  |/
+      /|  |\\
+     /      \\`,
         stats: {
-            // 身法與靈巧極高，保證高迴避與極快的起手
             brawn: 40, physique: 40, qiCap: 50, qiPot: 50, agi: 65, dex: 70, per: 60, comp: 60, luck: 50,
-            equips: {}, skills: [], dropExp: 10000, dropStats: { all: 5 }
+            equips: {}, skills: [], dropExp: 10000, dropStats: { all: 5 },
+            
+            // 翩若專屬多階段 AI 邏輯
+            aiScript: (enemyRef, defaultSkillId, combat) => {
+                if (!enemyRef.stanceLevel) {
+                    enemyRef.stanceLevel = 1;
+                    enemyRef.stanceType = 'def'; 
+                    enemyRef.isPhase2 = false;
+                    if (!enemyRef.aura) enemyRef.aura = {};
+                    enemyRef.aura['游雲'] = 1; 
+                }
+
+                // ==========================================
+                // 【二階段觸發】：血量低於 50% 且架勢疊滿 4 層
+                // ==========================================
+                if (enemyRef.hp < enemyRef.maxHp * 0.5 && enemyRef.stanceLevel >= 4 && !enemyRef.isPhase2) {
+                    enemyRef.isPhase2 = true;
+                    
+                    // 疊加「空之境界」
+                    if (!enemyRef.aura) enemyRef.aura = {};
+                    enemyRef.aura['空之境界'] = 1; 
+                    enemyRef.currentCombo = 400; // 氣力瞬間全滿
+                    
+                    combat.log("「只要是活著的東西，就算是神也殺給你看。」翩若睜開了雙眼！", "warn-msg");
+                    
+                    if (combat.win) {
+                        combat.win.classList.add('shake-effect');
+                        
+                        // 動態替換為二階段 (狂暴/懸浮姿態) 的 AA 演出
+                        let enemyAA = combat.win.querySelector('#bat-aa-e');
+                        if (enemyAA) {
+                            enemyAA.style.color = '#cc55ff'; 
+                            enemyAA.style.textShadow = '0 0 10px #cc55ff'; 
+                            enemyAA.innerText = `
+      \\   |   /
+    -  .----.  -
+      / \\__/ \\
+     ( ✧ _ ✧ )
+      \\|/\\/\\|/
+       |\\/\\/|
+      /      \\`;
+                        }
+                    }
+                }
+
+                // 技能出招選擇
+                if (enemyRef.isPhase2) {
+                    // 二階段：不限制氣力，讓她瘋狂連斬
+                    let p2Skills = ['e_pr_void_slash', 'e_pr_void_slash', 'e_pr_void_break'];
+                    if (enemyRef.currentCombo <= 120 && enemyRef.currentCombo >= 80) {
+                        return 'e_pr_void_death';
+                    } else {
+                        return p2Skills[Math.floor(Math.random() * p2Skills.length)];
+                    }
+                } else {
+                    // ==========================================
+                    // 【一階段：強制單發機制】
+                    // ==========================================
+                    let chosenSkill;
+                    if (enemyRef.stanceType === 'def') {
+                        chosenSkill = Math.random() < 0.5 ? 'e_pr_def_step' : 'e_pr_def_wind';
+                    } else {
+                        chosenSkill = Math.random() < 0.5 ? 'e_pr_off_light' : 'e_pr_off_strike';
+                    }
+
+                    // 查表：對應這四招在 db_skills.js 中的 comboCost (氣力消耗)
+                    const costMap = {
+                        'e_pr_def_step': 20,
+                        'e_pr_def_wind': 25,
+                        'e_pr_off_light': 25,
+                        'e_pr_off_strike': 35
+                    };
+                    
+                    // 【核心邏輯】：將她當前的氣力值，強行降到「剛好只能放這一招」
+                    // 這樣引擎在施放完畢並扣除消耗後，氣力會剛好 = 0
+                    // 必定無法通過連擊判定，從而完美且自然地結束敵方回合。
+                    enemyRef.currentCombo = costMap[chosenSkill];
+                    
+                    return chosenSkill;
+                }
+            }
         }
     }
 };

@@ -267,37 +267,92 @@ export const DB_SKILLS = {
         name: "【五十萬匹·海嘯爆破拳】", tags: ["念", "心震", "重天"], type: "qi", power: 200, comboCost: 100, vfx: "dragon_strike", hits: 1,
         msg: "「感受這五十萬匹的磁場轉動吧！給我碎！！」" 
     },
-    // 🌸 終極首領：洛神絕劍·翩若 專屬武學
-    // 第一階段 (comboCost 設為 999，確保一回合只打一招)
-    "e_pr_def_step": { 
-        name: "【洛水·微步】", tags: ["勢"], type: "qi", power: 10, comboCost: 999, vfx: "taiji_circle", 
-        msg: "翩若輕踏罡步，身形若隱若現。", onHit: switchPianruoStance 
+// ==========================================
+    // 翩若 - 一階段防禦系
+    // ==========================================
+    'e_pr_def_step': {
+        name: '游雲步', type: 'phys', comboCost: 20, power: 0, vfx: 'pr_bagua',
+        desc: "【洛神劍法】步伐輕靈如游雲。施展後獲得「游雲」狀態，疊滿可轉換架勢並獲得「蔽月」反擊。",
+        onCast: (ctx) => {
+            ctx.log("翩若步法輕靈，身形如游雲般難以捉摸。");
+            ctx.addAura(ctx.attacker, '游雲', 1);
+            if (ctx.attacker.aura['游雲'] >= 3) {
+                ctx.attacker.aura['游雲'] = 0;
+                ctx.addAura(ctx.attacker, '蔽月', 2);
+                ctx.attacker.stanceType = 'off';
+                ctx.attacker.stanceLevel = Math.min(4, (ctx.attacker.stanceLevel || 0) + 1);
+                ctx.log(`【架勢切換】翩若轉守為攻！目前境界：${ctx.attacker.stanceLevel}/4`, "warn-msg");
+            }
+        }
     },
-    "e_pr_def_wind": { 
-        name: "【洛水·流風】", tags: ["勢"], type: "qi", power: 0, comboCost: 999, vfx: "wind_sword", 
-        msg: "劍氣如迴風般流轉，大幅打亂了你的節奏！", 
-        onHit: (ctx) => { ctx.target.wait = Math.max(0, ctx.target.wait - 50); switchPianruoStance(ctx); } 
-    },
-    "e_pr_off_light": { 
-        name: "【神光·離合】", tags: ["勢", "銳"], type: "phys", power: 40, comboCost: 999, vfx: "sword_rain", hits: 3,
-        msg: "如神光乍現的連環刺擊！", onHit: switchPianruoStance 
-    },
-    "e_pr_off_strike": { 
-        name: "【神光·飛鳧】", tags: ["勢", "銳", "鈍"], type: "phys", power: 120, comboCost: 999, vfx: "heavy_slash", hits: 1, poiseDmg: 80,
-        msg: "長劍夾帶驚人的威勢當頭劈下！", onHit: switchPianruoStance 
+    'e_pr_def_wind': {
+        name: '驚鴻劍圍', type: 'phys', comboCost: 25, power: 30, hits: 2, vfx: 'pr_bagua',
+        desc: "【洛神劍法】以劍氣護體並進行二段反擊。施展後獲得「游雲」狀態。",
+        onCast: (ctx) => {
+            ctx.addAura(ctx.attacker, '游雲', 1);
+            // 【修正】：驚鴻劍圍也要加入切換架勢的判定
+            if (ctx.attacker.aura['游雲'] >= 3) {
+                ctx.attacker.aura['游雲'] = 0;
+                ctx.addAura(ctx.attacker, '蔽月', 2);
+                ctx.attacker.stanceType = 'off';
+                ctx.attacker.stanceLevel = Math.min(4, (ctx.attacker.stanceLevel || 0) + 1);
+                ctx.log(`【架勢切換】翩若轉守為攻！目前境界：${ctx.attacker.stanceLevel}/4`, "warn-msg");
+            }
+        }
     },
 
-    // 第二階段 (空之境界，極限連擊)
-    "e_pr_void_slash": { 
-        name: "【無明·閃】", tags: ["勢", "銳", "空"], type: "phys", power: 50, comboCost: 35, vfx: "wind_sword", hits: 1,
-        msg: "毫無軌跡可言的死之斬擊！" 
+    // ==========================================
+    // 翩若 - 一階段攻擊系
+    // ==========================================
+    'e_pr_off_light': {
+        name: '流風回雪', type: 'phys', comboCost: 25, power: 80, vfx: 'pr_sword_dance',
+        desc: "【洛神劍法】劍勢如流風回雪，銳不可當。施展後獲得「驚鴻」狀態，疊滿可轉換架勢並獲得「芙蕖」破甲。",
+        onCast: (ctx) => {
+            ctx.addAura(ctx.attacker, '驚鴻', 1);
+            if (ctx.attacker.aura['驚鴻'] >= 3) {
+                ctx.attacker.aura['驚鴻'] = 0;
+                ctx.addAura(ctx.attacker, '芙蕖', 1);
+                ctx.attacker.stanceType = 'def';
+                ctx.attacker.stanceLevel = Math.min(4, (ctx.attacker.stanceLevel || 0) + 1);
+                ctx.log(`【架勢切換】翩若收劍回防！目前境界：${ctx.attacker.stanceLevel}/4`, "warn-msg");
+            }
+        }
     },
-    "e_pr_void_break": { 
-        name: "【伽藍·碎】", tags: ["破勢", "空"], type: "qi", power: 60, comboCost: 45, vfx: "strike", hits: 1,
-        msg: "刀刃準確地切開了防禦的接縫處！" 
+    'e_pr_off_strike': {
+        name: '洛神一劍', type: 'qigong', comboCost: 35, power: 120, vfx: 'pr_sword_dance',
+        desc: "【洛神劍法】凝聚內力的一擊。施展後獲得「驚鴻」狀態。",
+        onCast: (ctx) => {
+            ctx.addAura(ctx.attacker, '驚鴻', 1);
+            // 【修正】：洛神一劍也要加入切換架勢的判定
+            if (ctx.attacker.aura['驚鴻'] >= 3) {
+                ctx.attacker.aura['驚鴻'] = 0;
+                ctx.addAura(ctx.attacker, '芙蕖', 1);
+                ctx.attacker.stanceType = 'def';
+                ctx.attacker.stanceLevel = Math.min(4, (ctx.attacker.stanceLevel || 0) + 1);
+                ctx.log(`【架勢切換】翩若收劍回防！目前境界：${ctx.attacker.stanceLevel}/4`, "warn-msg");
+            }
+        }
     },
-    "e_pr_void_death": { 
-        name: "【直死·境界式】", tags: ["直死", "空"], type: "phys", power: 150, comboCost: 100, vfx: "dragon_strike", hits: 1,
-        msg: "雙眸閃爍出幽藍色的光芒，劍鋒直指萬物的死線！" 
+
+    // ==========================================
+    // 翩若 - 二階段空之境界
+    // ==========================================
+    'e_pr_void_slash': {
+        name: '空·碎', type: 'qigong', comboCost: 8, power: 25, hits: 1, vfx: 'pr_void_shatter',
+        desc: "【空之境界】耗損極低的狂暴連斬。無視物理常規，撕裂空間。",
+        onCast: (ctx) => {}
+    },
+    'e_pr_void_break': {
+        name: '空·裂', type: 'qigong', comboCost: 15, power: 45, hits: 2, vfx: 'pr_void_shatter',
+        desc: "【空之境界】伴隨空間碎裂的二連擊。",
+        onCast: (ctx) => {}
+    },
+    'e_pr_void_death': {
+        name: '空之境界·直死', type: 'qigong', comboCost: 80, power: 250, vfx: 'pr_death_line',
+        desc: "【空之境界】看破萬物死線的終極一擊，威力絕倫。",
+        onCast: (ctx) => {
+            // 【修正】：正確呼叫 ctx.log
+            ctx.log("「看見了……你的死線！」", "warn-msg");
+        }
     },
 };

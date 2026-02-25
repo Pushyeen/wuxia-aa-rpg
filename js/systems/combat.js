@@ -5,6 +5,7 @@ import { DB_SKILLS } from '../data/db_skills.js';
 import { AvatarUI } from '../ui/avatar.js';
 import { DB_REACTIONS } from '../data/db_reactions.js';
 import { CombatUI } from '../ui/combat_ui.js';
+import { DB_AURAS } from '../data/db_auras.js';
 
 export const CombatSystem = {
     win: null, playerRef: null, enemyRef: null, interval: null, resolveBattle: null,
@@ -400,55 +401,13 @@ export const CombatSystem = {
                 let skills = this.enemyRef.stats.skills || ["s_enemy_slash"];
                 let chosenSkillId = skills[Math.floor(Math.random() * skills.length)];
 
-                if (this.enemyRef.id === 'e_boss_tang') {
-                    let ammo = this.enemyRef.aura && this.enemyRef.aura['千機匣'] ? this.enemyRef.aura['千機匣'] : 0;
-                    if (ammo <= 0) {
-                        chosenSkillId = 'e_tl_reload'; 
-                        this.log("【千機匣空竭】唐翎被迫退守重新裝填！", "sys-msg");
-                    } else if (chosenSkillId === 'e_tl_reload') {
-                        chosenSkillId = 'e_tl_gatling'; 
-                    }
-                } 
-                else if (this.enemyRef.id === 'e_elite_wunan') {
-                    let chongtian = this.enemyRef.aura && this.enemyRef.aura['重天'] ? this.enemyRef.aura['重天'] : 0;
-                    if (chongtian >= 5) {
-                        chosenSkillId = 'e_wu_ult'; 
-                        this.log("⚡ 武男狂氣突破極限！釋放終極殺招！", "warn-msg");
-                    } else if (chosenSkillId === 'e_wu_ult') {
-                        chosenSkillId = 'e_wu_push';
-                    }
-                }
-                else if (this.enemyRef.id === 'e_boss_pianruo') {
-                    if (!this.enemyRef.stanceLevel) {
-                        this.enemyRef.stanceLevel = 1;
-                        this.enemyRef.stanceType = 'def'; 
-                        this.enemyRef.isPhase2 = false;
-                        if (!this.enemyRef.aura) this.enemyRef.aura = {};
-                        this.enemyRef.aura['游雲'] = 1; 
-                    }
-
-                    if (this.enemyRef.hp < this.enemyRef.maxHp * 0.5 && this.enemyRef.stanceLevel >= 4 && !this.enemyRef.isPhase2) {
-                        this.enemyRef.isPhase2 = true;
-                        this.enemyRef.aura = { '空之境界': 1 }; 
-                        this.enemyRef.currentCombo = 400; 
-                        this.log("「只要是活著的東西，就算是神也殺給你看。」翩若睜開了雙眼！", "warn-msg");
-                        if (this.win) this.win.classList.add('shake-effect');
-                    }
-
-                    if (this.enemyRef.isPhase2) {
-                        let p2Skills = ['e_pr_void_slash', 'e_pr_void_slash', 'e_pr_void_break'];
-                        if (this.enemyRef.currentCombo <= 120 && this.enemyRef.currentCombo >= 80) {
-                            chosenSkillId = 'e_pr_void_death';
-                        } else {
-                            chosenSkillId = p2Skills[Math.floor(Math.random() * p2Skills.length)];
-                        }
-                    } else {
-                        if (this.enemyRef.stanceType === 'def') {
-                            chosenSkillId = Math.random() < 0.5 ? 'e_pr_def_step' : 'e_pr_def_wind';
-                        } else {
-                            chosenSkillId = Math.random() < 0.5 ? 'e_pr_off_light' : 'e_pr_off_strike';
-                        }
-                    }
+                // ==========================================
+                // 【重構後】：AI 邏輯委託給資料層處理
+                // 若該敵人有設定 aiScript，則讓它覆寫出招選擇
+                // ==========================================
+                if (this.enemyRef.stats.aiScript) {
+                    // 傳入敵人狀態、隨機抽到的招式、以及戰鬥系統實例 (以便調用 log 或震動特效)
+                    chosenSkillId = this.enemyRef.stats.aiScript(this.enemyRef, chosenSkillId, this);
                 }
 
                 let skill = DB_SKILLS[chosenSkillId];
@@ -485,45 +444,32 @@ export const CombatSystem = {
 
     async performAttack(isPlayer, skill, derAtk, derDef, attackerRef, targetRef) {
         if (this.battleEnded) return;   
-        if(targetRef === this.enemyRef && targetRef.aura['蔽月'] > 0) {
-            targetRef.hp = Math.min(targetRef.maxHp, targetRef.hp + 50); 
-            attackerRef.hp -= 150; 
-            this.log(`🌙 【蔽月】翩若柔化了攻勢，並反擊了 150 點傷害！`, "warn-msg"); 
-            CombatUI.showFloatingDamage('bat-target-player', 150, 150 / attackerRef.maxHp);
-            if (attackerRef.hp <= 0) { this.updateCombatUI(); this.endBattle(false); return; }
-        }
-        if(targetRef.aura['木甲'] > 0) {
-            targetRef.aura['木甲'] -= 200; 
-            this.log(`🛡️ 神工木甲吸收了傷害！`, "story-msg");
-            if(targetRef.aura['木甲'] <= 0) { targetRef.aura['木甲']=0; this.log("💥 木甲損毀！"); } 
-            return;
-        }
-        if(targetRef.aura['疾風'] > 0) { 
-            targetRef.aura['疾風']--; 
-            this.log("💨 逍遙步絕對閃避！", "story-msg"); 
-            return; 
-        }
-        if(targetRef.aura['反擊'] > 0) { 
-            targetRef.aura['反擊']--; 
-            attackerRef.hp -= 300; 
-            this.log(`☯ 借力打力反彈傷害！`, "dmg-msg"); 
-            let cId = (attackerRef === this.enemyRef) ? 'bat-target-enemy' : 'bat-target-player';
-            CombatUI.showFloatingDamage(cId, 300, 300 / attackerRef.maxHp);
-            if (attackerRef.hp <= 0) { this.updateCombatUI(); this.endBattle(targetRef === this.playerRef); }
-            return; 
+        // ==========================================
+        // 【新增機制：出招鉤子 (onCast)】
+        // 不論後續是否被閃避或氣場抵銷，只要出招就必定執行
+        // ==========================================
+        if (skill.onCast) {
+            skill.onCast(this.createContext(attackerRef, targetRef));
+            this.updateCombatUI();
         }
 
-        if(targetRef.aura['冰盾'] > 0) {
-            targetRef.aura['冰盾']--;
-            this.createContext(attackerRef, targetRef).addTag(attackerRef, 'ice', 1);
-            this.log(`❄️ 冰盾破碎，寒氣反噬了攻擊者！`, "story-msg");
-        }
-        if(targetRef.aura['絲陣'] > 0 && skill.type === 'phys') {
-            targetRef.aura['絲陣']--;
-            this.createContext(attackerRef, targetRef).addTag(attackerRef, 'silk', 1);
-            this.log(`🕸️ 盤絲舞動，絲線纏繞了近戰攻擊者！`, "warn-msg");
-        }
+        // ==========================================
+        // 【防禦端氣場攔截 (Hook)】
+        // ==========================================
+        let auraCtx = { combat: this, attacker: attackerRef, target: targetRef, skill: skill };
+        let cancelAttack = false;
 
+        for (let auraName in targetRef.aura) {
+            if (targetRef.aura[auraName] > 0 && DB_AURAS[auraName] && DB_AURAS[auraName].onDefend) {
+                let result = DB_AURAS[auraName].onDefend(auraCtx);
+                if (result && result.cancel) cancelAttack = true;
+                if (this.battleEnded) return; 
+            }
+        }
+        
+        if (cancelAttack) return;
+
+        // 閃避判定：只有 power > 0 的招式（有傷害的）才會被閃避
         if (skill.power > 0) {
             let dodgeChance = 20 + (derDef.dodge - derAtk.hit) * 1;
             if (targetRef.tags && targetRef.tags.frozen) dodgeChance = 0; 
@@ -531,6 +477,7 @@ export const CombatSystem = {
 
             if (Math.random() * 100 < dodgeChance) {
                 this.log(`殘影一閃，完全閃避了攻擊！`, "sys-msg");
+                // 閃避成功，攻擊者的連擊評價歸零
                 attackerRef.hitCombo = 0;
                 if (CombatUI.showHitCombo) CombatUI.showHitCombo(isPlayer, 0);
                 return;
@@ -591,15 +538,23 @@ export const CombatSystem = {
                     if (this.win && !this.battleEnded) { this.win.classList.add('shake-effect'); setTimeout(() => {if(this.win) this.win.classList.remove('shake-effect');}, 200); }
                 }
 
-                let fixDef = (targetRef.tags && targetRef.tags.frozen) ? 0 : derDef.fixDef;
-                let pctDef = (targetRef.tags && targetRef.tags.frozen) ? derDef.pctDef / 2 : derDef.pctDef;
-                if (attackerRef.aura && attackerRef.aura['芙蕖'] > 0) {
-                    fixDef = 0; pctDef = 0;
-                    this.log(`🌸 【芙蕖】劍氣無視了所有防禦！`, "warn-msg");
+                // ==========================================
+                // 【重構 2：攔截攻擊端氣場修改防禦數值】
+                // ==========================================
+                let dmgData = {
+                    fixDef: (targetRef.tags && targetRef.tags.frozen) ? 0 : derDef.fixDef,
+                    pctDef: (targetRef.tags && targetRef.tags.frozen) ? derDef.pctDef / 2 : derDef.pctDef
+                };
+
+                for (let auraName in attackerRef.aura) {
+                    if (attackerRef.aura[auraName] > 0 && DB_AURAS[auraName] && DB_AURAS[auraName].onAttack) {
+                        DB_AURAS[auraName].onAttack(auraCtx, dmgData);
+                    }
                 }
                 
-                finalDmg = (rawDmg - fixDef) * (1 - pctDef / 100);
+                finalDmg = (rawDmg - dmgData.fixDef) * (1 - dmgData.pctDef / 100);
                 finalDmg = Math.max(1, Math.floor(finalDmg));
+                // ==========================================
 
                 targetRef.hp -= finalDmg;
                 if (!isPlayer && finalDmg > 0 && !this.battleEnded) AvatarUI.playAction('hurt', true);
