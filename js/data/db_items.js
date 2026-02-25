@@ -8,23 +8,13 @@ export const DB_ITEMS = {
         action: (p, logger) => {
             let count = 0;
             for (let key in DB_SKILLS) {
-                // 不再排除任何技能，只要還沒學過就全部塞進技能庫
+                // 單純將技能加入玩家庫，絕不修改 DB_SKILLS 的原始資料
                 if (!p.skills.includes(key)) {
                     p.skills.push(key);
                     count++;
                 }
-                
-                // 【防崩潰機制】：幫沒有敘述的 Boss 技能動態補上文字，避免打開武學面板時白屏
-                if (!DB_SKILLS[key].desc) {
-                    DB_SKILLS[key].desc = "【測試/敵方技能】開發者測試專用招式，可能有特殊判定。";
-                }
-                
-                // 如果該技能連分類 (type) 都沒有，預設給予外功 (phys) 以免 UI 排版出錯
-                if (!DB_SKILLS[key].type) {
-                    DB_SKILLS[key].type = "phys";
-                }
             }
-            if (logger) logger.add(`✅ 測試模式：已強制學會 ${count} 種武學（含Boss專屬）！`, "story-msg");
+            if (logger) logger.add(`✅ 測試模式：已強制學會 ${count} 種武學！`, "story-msg");
         }
     },
     
