@@ -7,7 +7,7 @@ import { DB_SKILLS } from '../data/db_skills.js';
 export const CombatUI = {
     createWindow(eData) {
         let html = `
-            <div style="width: 580px; max-width: 100%; position: relative;"> 
+            <div style="width: 600px; max-width: 100%; position: relative;"> 
                 
                 <button id="bat-btn-mode" class="sys-btn" style="position:absolute; top:-35px; left:5px; border:2px outset #55ffff; color:#55ffff; padding:4px 12px; font-weight:bold;">模式: ${GameState.player.combatMode === 'auto' ? '自動' : '手動'}</button>
 
@@ -25,7 +25,7 @@ export const CombatUI = {
                 
                 <div class="battle-ui" style="display:flex; justify-content:space-between; align-items:flex-end; padding-top: 25px;">
                     
-                    <div id="bat-target-player" style="text-align:center; width:45%; position: relative;">
+                    <div id="bat-target-player" style="text-align:center; width:35%; position: relative;">
                         <div style="color:#ffaa55; font-weight:bold;">少俠</div>
                         <div class="bar-bg" style="margin: 0 auto;"><div id="bat-hp-p" class="bar-fill" style="width:100%;"></div></div>
                         <div class="bar-bg" style="margin: 2px auto 0; height:4px; border-color:#333;"><div id="bat-atb-p" class="bar-fill" style="background:#00aaff; width:0%;"></div></div>
@@ -39,13 +39,18 @@ export const CombatUI = {
                         </div>
                     </div>
 
-                    <div style="font-size:24px; color:#555; font-weight:bold; margin-bottom: 40px; z-index: 10;">VS</div>
+                    <div id="bat-center-zone" style="text-align:center; width:26%; position: relative; padding-bottom: 8px;">
+                        <div style="font-size:24px; color:#555; font-weight:bold; margin-bottom: 12px; z-index: 10; letter-spacing: 2px;">VS</div>
+                        <div class="zone-box" style="background: rgba(0,20,40,0.6); border: 1px solid #446688; box-shadow: 0 0 10px rgba(0,100,200,0.2);">
+                            <div class="zone-title" style="color:#aaddff; font-weight:bold; letter-spacing: 1px; margin-bottom: 6px; border-bottom: 1px dashed #446688; padding-bottom: 4px;">【戰場環境】</div>
+                            <div id="bat-env-display" style="min-height: 40px; display:flex; flex-direction:column; justify-content:center; gap:4px;">- 無物件 -</div>
+                        </div>
+                    </div>
 
-                    <div id="bat-target-enemy" style="text-align:center; width:45%; position: relative;">
+                    <div id="bat-target-enemy" style="text-align:center; width:35%; position: relative;">
                         <div style="color:#ff5555; font-weight:bold;">${eData.name}</div>
                         <div class="bar-bg" style="margin: 0 auto;"><div id="bat-hp-e" class="bar-fill" style="width:100%;"></div></div>
                         <div class="bar-bg" style="margin: 2px auto 0; height:4px; border-color:#333;"><div id="bat-atb-e" class="bar-fill" style="background:#ff8800; width:0%;"></div></div>
-                        
                         <div class="bar-bg" style="margin: 4px auto 0; height:6px;"><div id="bat-combo-e" class="bar-fill" style="background:#cc55ff; width:100%; transition: width 0.2s;"></div></div>
                         <div style="font-size:11px; color:#aaa;">氣力值: <span id="bat-combo-text-e">0</span></div>
 
@@ -89,13 +94,14 @@ export const CombatUI = {
 
         let derP = StatEngine.getDerived(GameState.player);
         let comboPEl = document.getElementById('bat-combo-p'), comboTxt = document.getElementById('bat-combo-text');
-        if (comboPEl) comboPEl.style.width = `${Math.max(0, (playerRef.currentCombo / Math.max(1, derP.comboMax)) * 100)}%`;
-        if (comboTxt) comboTxt.innerText = `${playerRef.currentCombo} / ${derP.comboMax}`;
+        // 修正：當氣力為負數時，血條不要倒縮破版
+        if (comboPEl) comboPEl.style.width = `${Math.max(0, Math.min(100, (playerRef.currentCombo / Math.max(1, derP.comboMax)) * 100))}%`;
+        if (comboTxt) comboTxt.innerHTML = `${playerRef.currentCombo < 0 ? '<span style="color:#ff5555;">'+playerRef.currentCombo+'</span>' : playerRef.currentCombo} / ${derP.comboMax}`;
 
         let derE = StatEngine.getDerived(enemyRef);
         let comboEEl = document.getElementById('bat-combo-e'), comboTxtE = document.getElementById('bat-combo-text-e');
-        if (comboEEl) comboEEl.style.width = `${Math.max(0, (enemyRef.currentCombo / Math.max(1, derE.comboMax)) * 100)}%`;
-        if (comboTxtE) comboTxtE.innerText = `${Math.floor(enemyRef.currentCombo)} / ${derE.comboMax}`;
+        if (comboEEl) comboEEl.style.width = `${Math.max(0, Math.min(100, (enemyRef.currentCombo / Math.max(1, derE.comboMax)) * 100))}%`;
+        if (comboTxtE) comboTxtE.innerHTML = `${enemyRef.currentCombo < 0 ? '<span style="color:#ff5555;">'+Math.floor(enemyRef.currentCombo)+'</span>' : Math.floor(enemyRef.currentCombo)} / ${derE.comboMax}`;
 
         const renderTags = (tags) => {
             let html = [];
@@ -106,6 +112,8 @@ export const CombatUI = {
             if(tags['死穴']) html.push(`<span class="tag" style="color:#ff00ff; border-color:#ff00ff; box-shadow: 0 0 5px #ff00ff;">🎯 死穴 x${tags['死穴']}</span>`);
             if(tags['餘音']) html.push(`<span class="tag" style="color:#55ffff; border-color:#55ffff;">🎵 餘音 x${tags['餘音']}</span>`);
             if(tags['破甲毒']) html.push(`<span class="tag" style="color:#aaffaa; border-color:#aaffaa; box-shadow: 0 0 5px #aaffaa;">☠️ 破甲毒 x${tags['破甲毒']}</span>`);
+            // 【新增】：渲染破綻標籤
+            if(tags['破綻']) html.push(`<span class="tag" style="color:#ff5555; border-color:#ff5555; box-shadow: 0 0 5px #ff0000;">⚠️ 破綻 x${tags['破綻']}</span>`);
             return html.join('') || '- 無印記 -';
         };
 
@@ -117,10 +125,24 @@ export const CombatUI = {
             return html.join('') || '- 無氣場 -';
         };
 
+        const renderEnv = (env) => {
+            let html = [];
+            if(env.needles > 0) html.push(`<span class="tag" style="color:#aaa; border-color:#aaa; width:fit-content; margin: 0 auto;">📌 暗器 x${env.needles}</span>`);
+            if(env.fire > 0) html.push(`<span class="tag fire" style="width:fit-content; margin: 0 auto;">🔥 火種 x${env.fire}</span>`);
+            if(env.ice_cone > 0) html.push(`<span class="tag ice" style="width:fit-content; margin: 0 auto;">❄️ 冰錐 x${env.ice_cone}</span>`);
+            if(env.gears > 0) html.push(`<span class="tag" style="color:#aaa; border-color:#aaa; width:fit-content; margin: 0 auto;">⚙️ 齒輪 x${env.gears}</span>`);
+            if(env.turret > 0) html.push(`<span class="tag" style="color:#ffaa00; border-color:#ffaa00; width:fit-content; margin: 0 auto;">🏹 連弩塔 x${env.turret}</span>`);
+            if(env.taichi > 0) html.push(`<span class="tag" style="color:#fff; border-color:#fff; width:fit-content; margin: 0 auto;">☯️ 太極陣 x${env.taichi}</span>`);
+            return html.join('') || '- 無物件 -';
+        };
+
         let tagsP = document.getElementById('bat-tags-p');
         if (tagsP) tagsP.innerHTML = renderTags(playerRef.tags);
         let auraP = document.getElementById('bat-aura-p');
         if (auraP) auraP.innerHTML = renderAuras(playerRef.aura);
+
+        let envDisplay = document.getElementById('bat-env-display');
+        if (envDisplay) envDisplay.innerHTML = renderEnv(GameState.env);
 
         let tagsE = document.getElementById('bat-tags-e');
         if (tagsE) tagsE.innerHTML = renderTags(enemyRef.tags);
@@ -183,7 +205,7 @@ export const CombatUI = {
         container.appendChild(el);
         setTimeout(() => { if (el) el.remove(); }, 1500);
     },
-// 【新增】：封裝手動選單的 DOM 渲染與事件綁定，並回傳 Promise
+
     showManualMenu(playerRef) {
         return new Promise(resolve => {
             const menu = document.getElementById('manual-skill-menu');
@@ -192,57 +214,57 @@ export const CombatUI = {
 
             if (!menu || !list || !endBtn) return resolve(null);
 
-            // 清空先前的按鈕
             list.innerHTML = '';
             
             let skills = GameState.player.activeSkills;
             if (!skills || skills.length === 0) {
-                // 如果沒招式可用，直接回傳 null 結束回合
                 return resolve(null);
             }
 
-            // 渲染招式按鈕
             skills.forEach(skId => {
                 let sk = DB_SKILLS[skId];
                 if (!sk) return;
 
-                let failRate = Math.max(0, Math.floor((1 - (playerRef.currentCombo / 100)) * 100));
+                // 【修改】：計算施放後的預期氣力與新的破綻機率
+                let simulatedCombo = playerRef.currentCombo - sk.comboCost;
+                let failRate = 0;
+                if (simulatedCombo < 50) {
+                    failRate = Math.max(0, Math.min(75, Math.floor(((50 - simulatedCombo) / 50) * 75)));
+                }
+
                 let btn = document.createElement('button');
                 btn.className = 'sys-btn';
                 btn.style.width = '100%'; 
                 btn.style.padding = '6px';
                 btn.style.textAlign = 'left';
+                btn.style.transition = 'all 0.3s';
                 
                 btn.innerHTML = `
                     <div style="font-size:14px; margin-bottom:2px;">${sk.name}</div>
-                    <div style="font-size:11px; color:#888; text-align:right;">氣力:${sk.comboCost} | 破綻:${failRate}%</div>
+                    <div style="font-size:11px; color:#888; text-align:right;">氣力:${sk.comboCost} | <span style="color:${failRate > 0 ? '#ff5555' : '#55ff55'};">破綻:${failRate}%</span></div>
                 `;
                 
-                // 氣力不足時反灰禁用
-                if (playerRef.currentCombo < sk.comboCost) {
-                    btn.disabled = true;
-                    btn.style.opacity = '0.5';
-                    btn.style.cursor = 'not-allowed';
+                // 【修改】：解除 disabled 限制，改為紅色警告
+                if (simulatedCombo < 0) {
+                    btn.style.borderColor = '#ff0000';
+                    btn.style.backgroundColor = 'rgba(100,0,0,0.6)';
+                    btn.innerHTML += `<div style="font-size:10px; color:#ffaaaa; text-align:center; margin-top:2px;">⚠️ 透支警告</div>`;
                 }
 
                 btn.onclick = () => {
-                    // 點擊後，將選擇的技能 ID 傳回給邏輯層
                     resolve(skId);
                 };
                 list.appendChild(btn);
             });
 
             endBtn.onclick = () => {
-                // 點擊結束回合，傳回 null
                 resolve(null);
             };
 
-            // 顯示選單
             menu.style.display = 'flex';
         });
     },
 
-    // 【新增】：隱藏手動選單
     hideManualMenu() {
         const menu = document.getElementById('manual-skill-menu');
         if (menu) menu.style.display = 'none';

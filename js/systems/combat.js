@@ -27,13 +27,17 @@ export const CombatSystem = {
 
             this.enemyRef = { 
                 id: enemyId, hp: eData.hp, maxHp: eData.maxHp, 
-                wait: 0, currentCombo: 0, 
+                wait: 0, currentCombo: 0, turnSkillCount: 0, _exhaustLogged: false, // 新增追蹤變數
                 stats: eData.stats, tags: {}, 
                 aura: eData.aura ? { ...eData.aura } : {}, 
                 hitCombo: 0 
             };
-            this.playerRef = { hp: GameState.player.hp, maxHp: GameState.player.maxHp, wait: 0, currentCombo: 0, aura: {}, tags: {}, hitCombo: 0 };
-            GameState.env = { needles: 0, fire: 0, gears: 0, taichi: 0, turret: 0 };
+            this.playerRef = { 
+                hp: GameState.player.hp, maxHp: GameState.player.maxHp, wait: 0, currentCombo: 0, 
+                turnSkillCount: 0, _exhaustLogged: false, aura: {}, tags: {}, hitCombo: 0 
+            };
+            
+            GameState.env = { needles: 0, fire: 0, gears: 0, taichi: 0, turret: 0, ice_cone: 0 };
             
             this.isExecuting = false;
             this.isAttemptingFlee = false;
@@ -56,7 +60,6 @@ export const CombatSystem = {
                     };
                 }
 
-                // 綁定模式切換按鈕
                 let btnMode = this.win.querySelector('#bat-btn-mode');
                 if (btnMode) {
                     btnMode.onclick = () => {
@@ -104,18 +107,29 @@ export const CombatSystem = {
                     if(this.win && !this.battleEnded) { this.win.classList.add('shake-effect'); setTimeout(() => {if(this.win) this.win.classList.remove('shake-effect');}, 200); }
                 }
             },
+            
             addAura: (p, type, amt) => { 
                 if(this.battleEnded) return; 
                 if(!p.aura) p.aura={};
                 if(!p.aura[type]) p.aura[type]=0; 
-                p.aura[type]+=amt; 
-                let pName = p === this.playerRef ? '少俠' : '敵人';
-                this.log(`✨ ${pName}獲得氣場：${type}`, "story-msg"); 
+                
+                let maxCaps = { '霓裳': 2, '空城': 1 };
+                let current = p.aura[type];
+                let cap = maxCaps[type] || 999; 
+                let actualAmt = amt;
+                if (current + amt > cap) actualAmt = cap - current; 
+                
+                if (actualAmt > 0) {
+                    p.aura[type] += actualAmt; 
+                    let pName = p === this.playerRef ? '少俠' : '敵人';
+                    this.log(`✨ ${pName}獲得氣場：${type} (目前 ${p.aura[type]} 層)`, "story-msg"); 
+                }
             },
+            
             addEnv: (type, amt) => { 
                 if(this.battleEnded) return; 
                 let limit = Math.floor(StatEngine.getDerived(GameState.player).qiCap / 10); 
-                GameState.env[type] += amt; 
+                GameState.env[type] = (GameState.env[type] || 0) + amt; 
                 if(GameState.env[type] > limit) GameState.env[type] = limit; 
             }
         };
@@ -193,9 +207,13 @@ export const CombatSystem = {
 
         this.updateCombatUI();
 
+        // 【回合重置邏輯】：補滿氣力，清空破綻
         if (this.playerRef.wait >= 100) {
             this.playerRef.wait = 0; 
             this.playerRef.currentCombo = derP.comboMax; 
+            this.playerRef.turnSkillCount = 0;
+            this.playerRef._exhaustLogged = false;
+            this.playerRef.tags['破綻'] = 0; // 新回合清空破綻
             this.updateCombatUI();
             
             if (this.isAttemptingFlee) {
@@ -203,7 +221,6 @@ export const CombatSystem = {
                 return;
             }
 
-            // --- 判斷執行手動或自動戰鬥 ---
             if (GameState.player.combatMode === "manual") {
                 this.executePlayerManualTurn(derP, derE); 
             } else {
@@ -215,17 +232,19 @@ export const CombatSystem = {
         if (this.enemyRef.wait >= 100) {
             this.enemyRef.wait = 0;
             this.enemyRef.currentCombo = derE.comboMax;
+            this.enemyRef.turnSkillCount = 0;
+            this.enemyRef._exhaustLogged = false;
+            this.enemyRef.tags['破綻'] = 0;
             this.updateCombatUI();
             this.executeEnemyComboChain(derE, derP);
             return;
         }
     },
 
-    // --- 新增：手動回合邏輯 ---
     async executePlayerManualTurn(derP, derE) {
         if (this.isExecuting || this.battleEnded) return;
         this.isExecuting = true;
-        clearInterval(this.interval); // 暫停時間流逝
+        clearInterval(this.interval); 
 
         const menu = document.getElementById('manual-skill-menu');
         const list = document.getElementById('skill-list-container');
@@ -233,10 +252,8 @@ export const CombatSystem = {
 
         const refreshMenu = () => {
             list.innerHTML = '';
-            
             let skills = GameState.player.activeSkills;
             if (!skills || skills.length === 0) {
-                this.log(`【破綻】無招可用，強制結束攻勢。`, "warn-msg");
                 this.finishManualTurn();
                 return;
             }
@@ -245,28 +262,35 @@ export const CombatSystem = {
                 let sk = DB_SKILLS[skId];
                 if (!sk) return;
 
-                let failRate = Math.max(0, Math.floor((1 - (this.playerRef.currentCombo / 100)) * 100));
+                let simulatedCombo = this.playerRef.currentCombo - sk.comboCost;
+                let failRate = 0;
+                if (simulatedCombo < 50) {
+                    failRate = Math.max(0, Math.min(75, Math.floor(((50 - simulatedCombo) / 50) * 75)));
+                }
+
                 let btn = document.createElement('button');
                 btn.className = 'sys-btn';
                 btn.style.width = '100%'; 
                 btn.style.padding = '6px';
                 btn.style.textAlign = 'left';
+                btn.style.transition = 'all 0.3s';
                 
                 btn.innerHTML = `
                     <div style="font-size:14px; margin-bottom:2px;">${sk.name}</div>
-                    <div style="font-size:11px; color:#888; text-align:right;">氣力:${sk.comboCost} | 破綻:${failRate}%</div>
+                    <div style="font-size:11px; color:#888; text-align:right;">氣力:${sk.comboCost} | <span style="color:${failRate > 0 ? '#ff5555' : '#55ff55'};">破綻:${failRate}%</span></div>
                 `;
                 
-                if (this.playerRef.currentCombo < sk.comboCost) {
-                    btn.disabled = true;
-                    btn.style.opacity = '0.5';
-                    btn.style.cursor = 'not-allowed';
+                if (simulatedCombo < 0) {
+                    btn.style.borderColor = '#ff0000';
+                    btn.style.backgroundColor = 'rgba(100,0,0,0.6)';
+                    btn.innerHTML += `<div style="font-size:10px; color:#ffaaaa; text-align:center; margin-top:2px;">⚠️ 透支警告</div>`;
                 }
 
                 btn.onclick = async () => {
                     this.log(`[少俠] 手動施展 ${sk.name}！`, "story-msg");
-                    menu.style.display = 'none'; // 演出期間隱藏選單
+                    menu.style.display = 'none'; 
                     
+                    this.playerRef.turnSkillCount++;
                     await this.performAttack(true, sk, derP, derE, this.playerRef, this.enemyRef);
                     
                     if (this.battleEnded) return;
@@ -274,14 +298,22 @@ export const CombatSystem = {
                     this.playerRef.currentCombo -= sk.comboCost;
                     this.updateCombatUI();
 
-                    // 連擊破綻判定
-                    let roll = Math.floor(Math.random() * 100) + 1;
-                    if (roll > this.playerRef.currentCombo) {
-                        this.log(`【破綻】招式銜接失敗，氣力不繼！`, "warn-msg");
+                    // 【修改】：新的漸進式失敗判定
+                    let currentAfter = this.playerRef.currentCombo;
+                    let actualFailRate = currentAfter >= 50 ? 0 : Math.max(0, Math.min(75, Math.floor(((50 - currentAfter) / 50) * 75)));
+                    let roll = Math.floor(Math.random() * 100);
+                    
+                    if (roll < actualFailRate) {
+                        this.playerRef.tags['破綻'] = (this.playerRef.tags['破綻'] || 0) + this.playerRef.turnSkillCount;
+                        this.log(`【破綻】招式銜接失敗！露出 ${this.playerRef.turnSkillCount} 處破綻！`, "warn-msg");
                         this.finishManualTurn();
                     } else {
-                        this.log(`⚡ 連段成功！請繼續追擊！`, "sys-msg");
-                        menu.style.display = 'flex'; // 重新顯示為 flex 以保持排版
+                        if (currentAfter < 0) {
+                            this.log(`⚠️ 強行透支氣力，但成功穩住了身形！`, "warn-msg");
+                        } else {
+                            this.log(`⚡ 連段成功！請繼續追擊！`, "sys-msg");
+                        }
+                        menu.style.display = 'flex'; 
                         refreshMenu();
                     }
                 };
@@ -304,10 +336,9 @@ export const CombatSystem = {
         this.isExecuting = false;
         if (!this.battleEnded) {
             clearInterval(this.interval);
-            this.interval = setInterval(() => this.tick(), 50); // 恢復時間流動
+            this.interval = setInterval(() => this.tick(), 50); 
         }
     },
-    // --- 手動回合邏輯結束 ---
 
     async executeFlee(derP, derE) {
         if (this.isExecuting || this.battleEnded) return;
@@ -364,6 +395,7 @@ export const CombatSystem = {
                 if (!skill) break;
                 
                 this.log(`[少俠] 施展 ${skill.name}！`, "story-msg");
+                this.playerRef.turnSkillCount++;
                 await this.performAttack(true, skill, derP, derE, this.playerRef, this.enemyRef);
                 
                 if (this.battleEnded) break; 
@@ -371,9 +403,13 @@ export const CombatSystem = {
                 this.playerRef.currentCombo -= skill.comboCost;
                 this.updateCombatUI();
 
-                let roll = Math.floor(Math.random() * 100) + 1;
-                if (roll > this.playerRef.currentCombo) {
-                    this.log(`【破綻】氣力不繼，收招退守。(判定：${roll} > 剩餘 ${Math.floor(this.playerRef.currentCombo)})`, "warn-msg");
+                let currentAfter = this.playerRef.currentCombo;
+                let actualFailRate = currentAfter >= 50 ? 0 : Math.max(0, Math.min(75, Math.floor(((50 - currentAfter) / 50) * 75)));
+                let roll = Math.floor(Math.random() * 100);
+                
+                if (roll < actualFailRate) {
+                    this.playerRef.tags['破綻'] = (this.playerRef.tags['破綻'] || 0) + this.playerRef.turnSkillCount;
+                    this.log(`【破綻】招式銜接失敗！露出 ${this.playerRef.turnSkillCount} 處破綻！`, "warn-msg");
                     break; 
                 } else {
                     this.log(`⚡ 攻勢連綿不斷！馬上接續下一招！`, "sys-msg");
@@ -391,6 +427,8 @@ export const CombatSystem = {
         }
     },
 
+// js/systems/combat.js (片段替換)
+
     async executeEnemyComboChain(derE, derP) {
         if (this.isExecuting || this.battleEnded) return;
         this.isExecuting = true;
@@ -401,19 +439,59 @@ export const CombatSystem = {
                 let skills = this.enemyRef.stats.skills || ["s_enemy_slash"];
                 let chosenSkillId = skills[Math.floor(Math.random() * skills.length)];
 
-                // ==========================================
-                // 【重構後】：AI 邏輯委託給資料層處理
-                // 若該敵人有設定 aiScript，則讓它覆寫出招選擇
-                // ==========================================
                 if (this.enemyRef.stats.aiScript) {
-                    // 傳入敵人狀態、隨機抽到的招式、以及戰鬥系統實例 (以便調用 log 或震動特效)
                     chosenSkillId = this.enemyRef.stats.aiScript(this.enemyRef, chosenSkillId, this);
                 }
 
                 let skill = DB_SKILLS[chosenSkillId];
                 if (!skill) break;
 
+                // ==========================================
+                // 【新增】：敵方 AI 風險評估機制 (AI Risk Assessment)
+                // ==========================================
+                
+                // 取得敵方性格，預設為常規型 (balanced)
+                let aiTrait = this.enemyRef.stats.aiTrait || 'balanced'; 
+                
+                // 模擬出招後的氣力與破綻機率
+                let simulatedCombo = this.enemyRef.currentCombo - (skill.comboCost || 20);
+                let simulatedFailRate = simulatedCombo >= 50 ? 0 : Math.max(0, Math.min(75, Math.floor(((50 - simulatedCombo) / 50) * 75)));
+                
+                let shouldStop = false;
+
+                if (aiTrait === 'cautious') {
+                    // 謹慎型：只要有破綻機率就停手
+                    if (simulatedCombo < 50) shouldStop = true;
+                } 
+                else if (aiTrait === 'balanced') {
+                    // 常規型：絕不透支，且根據破綻機率進行「主動退守檢定」
+                    if (simulatedCombo < 0) {
+                        shouldStop = true; 
+                    } else if (simulatedFailRate > 0) {
+                        // 破綻機率越高，AI 越可能選擇主動停手不貪刀
+                        if (Math.random() * 100 < simulatedFailRate) {
+                            shouldStop = true;
+                        }
+                    }
+                }
+                else if (aiTrait === 'berserk') {
+                    // 狂暴型：無視破綻，甚至願意透支，但設定一個極限防呆(-50)
+                    if (simulatedCombo < -50) shouldStop = true;
+                }
+
+                // AI 決定主動收招 (不會掛上破綻標籤)
+                if (shouldStop) {
+                    // 如果一招都還沒放就停了，可以不用印 Log；如果有連段才印出主動收招
+                    if (this.enemyRef.turnSkillCount > 0) {
+                        this.log(`[敵方] 攻勢漸緩，主動收招轉為守備姿態。`, "sys-msg");
+                    }
+                    break; 
+                }
+
+                // ==========================================
+
                 this.log(`[敵方] 施展 ${skill.name}！`, "warn-msg");
+                this.enemyRef.turnSkillCount++;
                 
                 await this.performAttack(false, skill, derE, derP, this.enemyRef, this.playerRef);
                 
@@ -422,12 +500,20 @@ export const CombatSystem = {
                 this.enemyRef.currentCombo -= (skill.comboCost || 20); 
                 this.updateCombatUI();
 
-                let roll = Math.floor(Math.random() * 100) + 1;
-                if (roll > this.enemyRef.currentCombo) {
-                    this.log(`【敵方破綻】氣力不繼，攻勢暫歇。(判定：${roll} > 剩餘 ${Math.floor(this.enemyRef.currentCombo)})`, "sys-msg");
+                let currentAfter = this.enemyRef.currentCombo;
+                let actualFailRate = currentAfter >= 50 ? 0 : Math.max(0, Math.min(75, Math.floor(((50 - currentAfter) / 50) * 75)));
+                let roll = Math.floor(Math.random() * 100);
+                
+                if (roll < actualFailRate) {
+                    this.enemyRef.tags['破綻'] = (this.enemyRef.tags['破綻'] || 0) + this.enemyRef.turnSkillCount;
+                    this.log(`【敵方破綻】招式銜接失敗，露出 ${this.enemyRef.turnSkillCount} 處破綻！`, "warn-msg");
                     break; 
                 } else {
-                    this.log(`⚡ 敵方攻勢連綿不斷！馬上接續下一招！`, "sys-msg");
+                    if (currentAfter < 0) {
+                        this.log(`⚠️ 敵方強行透支氣力，發動狂暴猛攻！`, "warn-msg");
+                    } else {
+                        this.log(`⚡ 敵方攻勢連綿不斷！馬上接續下一招！`, "sys-msg");
+                    }
                     await new Promise(r => setTimeout(r, 200)); 
                 }
             }
@@ -444,18 +530,12 @@ export const CombatSystem = {
 
     async performAttack(isPlayer, skill, derAtk, derDef, attackerRef, targetRef) {
         if (this.battleEnded) return;   
-        // ==========================================
-        // 【新增機制：出招鉤子 (onCast)】
-        // 不論後續是否被閃避或氣場抵銷，只要出招就必定執行
-        // ==========================================
+        
         if (skill.onCast) {
             skill.onCast(this.createContext(attackerRef, targetRef));
             this.updateCombatUI();
         }
 
-        // ==========================================
-        // 【防禦端氣場攔截 (Hook)】
-        // ==========================================
         let auraCtx = { combat: this, attacker: attackerRef, target: targetRef, skill: skill };
         let cancelAttack = false;
 
@@ -469,7 +549,6 @@ export const CombatSystem = {
         
         if (cancelAttack) return;
 
-        // 閃避判定：只有 power > 0 的招式（有傷害的）才會被閃避
         if (skill.power > 0) {
             let dodgeChance = 20 + (derDef.dodge - derAtk.hit) * 1;
             if (targetRef.tags && targetRef.tags.frozen) dodgeChance = 0; 
@@ -477,7 +556,6 @@ export const CombatSystem = {
 
             if (Math.random() * 100 < dodgeChance) {
                 this.log(`殘影一閃，完全閃避了攻擊！`, "sys-msg");
-                // 閃避成功，攻擊者的連擊評價歸零
                 attackerRef.hitCombo = 0;
                 if (CombatUI.showHitCombo) CombatUI.showHitCombo(isPlayer, 0);
                 return;
@@ -538,13 +616,20 @@ export const CombatSystem = {
                     if (this.win && !this.battleEnded) { this.win.classList.add('shake-effect'); setTimeout(() => {if(this.win) this.win.classList.remove('shake-effect');}, 200); }
                 }
 
-                // ==========================================
-                // 【重構 2：攔截攻擊端氣場修改防禦數值】
-                // ==========================================
                 let dmgData = {
                     fixDef: (targetRef.tags && targetRef.tags.frozen) ? 0 : derDef.fixDef,
                     pctDef: (targetRef.tags && targetRef.tags.frozen) ? derDef.pctDef / 2 : derDef.pctDef
                 };
+
+                // 【修改】：力竭狀態 (氣力負數) 防禦崩潰
+                if (targetRef.currentCombo < 0) {
+                    dmgData.fixDef = 0;
+                    dmgData.pctDef = Math.floor(dmgData.pctDef / 2);
+                    if (!targetRef._exhaustLogged) {
+                        this.log(`⚠️ ${targetRef.id ? '敵方' : '少俠'}氣力透支，真氣渙散，無法有效防禦！`, "warn-msg");
+                        targetRef._exhaustLogged = true; // 每回合只提示一次
+                    }
+                }
 
                 for (let auraName in attackerRef.aura) {
                     if (attackerRef.aura[auraName] > 0 && DB_AURAS[auraName] && DB_AURAS[auraName].onAttack) {
@@ -554,7 +639,13 @@ export const CombatSystem = {
                 
                 finalDmg = (rawDmg - dmgData.fixDef) * (1 - dmgData.pctDef / 100);
                 finalDmg = Math.max(1, Math.floor(finalDmg));
-                // ==========================================
+
+                // 【修改】：擊中破綻，造成 1.5 倍傷害並消耗 1 層標籤
+                if (targetRef.tags && targetRef.tags['破綻'] > 0) {
+                    finalDmg = Math.floor(finalDmg * 1.5);
+                    targetRef.tags['破綻']--;
+                    this.log(`💥 擊破門戶！順著破綻造成了 1.5 倍的致命傷害！`, "dmg-msg");
+                }
 
                 targetRef.hp -= finalDmg;
                 if (!isPlayer && finalDmg > 0 && !this.battleEnded) AvatarUI.playAction('hurt', true);

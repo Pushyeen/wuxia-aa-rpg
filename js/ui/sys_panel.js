@@ -60,7 +60,6 @@ const TabInventory = {
 
         html += `<div style="color:#aaaaaa; margin:15px 0 10px 0; font-weight:bold;">＜隨身行囊＞</div>`;
 
-        // 將物品分類打包
         let categories = { '全部': [], '武器': [], '防具': [], '消耗品': [] };
         p.inventory.forEach((itemId, idx) => {
             let item = DB_ITEMS[itemId];
@@ -74,19 +73,17 @@ const TabInventory = {
 
         if (!categories[this.currentCategory] || categories[this.currentCategory].length === 0) this.currentCategory = '全部';
 
-        // 渲染次級分頁
         html += `<div style="display:flex; gap:8px; margin-bottom:12px; border-bottom: 1px solid #444; padding-bottom: 6px; overflow-x:auto;">`;
         for (let cat in categories) {
             let isActive = (this.currentCategory === cat);
             let color = isActive ? '#55ffff' : '#888';
             let border = isActive ? 'border-bottom: 2px solid #55ffff;' : 'border-bottom: 2px solid transparent;';
-            html += `<div class="inv-subtab" data-cat="${cat}" style="cursor:pointer; padding:2px 4px; color:${color}; font-weight:bold; ${border} transition:all 0.2s;">
+            html += `<div class="inv-subtab" data-cat="${cat}" style="cursor:pointer; padding:2px 4px; color:${color}; font-weight:bold; ${border} transition:all 0.2s; white-space:nowrap;">
                         ${cat} <span style="font-size:10px; color:#555;">(${categories[cat].length})</span>
                      </div>`;
         }
         html += `</div>`;
 
-        // 渲染選中類別的物品
         let itemsToRender = categories[this.currentCategory];
         if (itemsToRender.length === 0) {
             html += "<div style='color:#888;'>此分類下沒有物品。</div>";
@@ -118,34 +115,46 @@ const TabSkill = {
         let html = '';
         if (p.skills.length === 0) return `<div style="color:#888; text-align:center; margin-top: 20px;">目前尚未學會任何武功。</div>`;
         
-        let categories = { '全部': [], '拳掌': [], '劍法': [], '暗器': [], '其他': [] };
+        // 【修改點 1】：採用極簡單字命名，縮減寬度佔用
+        let categories = { '全部': [], '勢': [], '道': [], '念': [], '音': [], '策': [], '其他': [] };
         
         p.skills.forEach(skillId => {
             let sk = DB_SKILLS[skillId];
             if (!sk) return;
             
-            // 【防呆 1】：確保 tags 與 name 必定存在
             let tags = sk.tags || []; 
             let skillName = sk.name || "未知招式";
             
             categories['全部'].push(skillId);
             
-            // 安全地使用 tags.includes
-            if (tags.includes('鈍') || skillName.includes('拳') || skillName.includes('掌')) categories['拳掌'].push(skillId);
-            else if (tags.includes('劍') || tags.includes('銳') || skillName.includes('劍')) categories['劍法'].push(skillId);
-            else if (tags.includes('牽引') || skillName.includes('針')) categories['暗器'].push(skillId);
-            else categories['其他'].push(skillId);
+            // 【修改點 2】：嚴格對應五大行，未匹配的歸入其他
+            if (tags.includes('勢')) categories['勢'].push(skillId);
+            else if (tags.includes('道')) categories['道'].push(skillId);
+            else if (tags.includes('念')) categories['念'].push(skillId);
+            else if (tags.includes('音')) categories['音'].push(skillId);
+            else if (tags.includes('策')) categories['策'].push(skillId);
+            else {
+                // 防呆：相容舊版未修改到的招式
+                if (tags.includes('鈍') || tags.includes('銳') || skillName.includes('拳') || skillName.includes('掌') || skillName.includes('劍')) {
+                    categories['勢'].push(skillId);
+                } else {
+                    categories['其他'].push(skillId);
+                }
+            }
         });
 
         if (!categories[this.currentCategory] || categories[this.currentCategory].length === 0) this.currentCategory = '全部';
 
-        html += `<div style="display:flex; gap:8px; margin-bottom:12px; border-bottom: 1px solid #444; padding-bottom: 6px; overflow-x:auto;">`;
+        // 【修改點 3】：加入 flex-wrap: wrap，並將 gap 從 8px 縮小為 6px，允許頁籤在空間不足時自動折行
+        html += `<div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; border-bottom: 1px solid #444; padding-bottom: 6px;">`;
         for (let cat in categories) {
-            if (categories[cat].length > 0) {
+            // 即使數量為 0 也可考慮顯示，或者隱藏。這裡維持有技能才顯示該分類
+            if (categories[cat].length > 0 || cat === '全部') {
                 let isActive = (this.currentCategory === cat);
                 let color = isActive ? '#55ffff' : '#888';
                 let border = isActive ? 'border-bottom: 2px solid #55ffff;' : 'border-bottom: 2px solid transparent;';
-                html += `<div class="skill-subtab" data-cat="${cat}" style="cursor:pointer; padding:2px 4px; color:${color}; font-weight:bold; ${border} transition:all 0.2s;">
+                // 增加 font-size: 13px 讓標籤稍微緊湊
+                html += `<div class="skill-subtab" data-cat="${cat}" style="cursor:pointer; padding:2px 4px; font-size: 13px; color:${color}; font-weight:bold; ${border} transition:all 0.2s; white-space:nowrap;">
                             ${cat} <span style="font-size:10px; color:#555;">(${categories[cat].length})</span>
                          </div>`;
             }
@@ -157,14 +166,22 @@ const TabSkill = {
             let isActive = p.activeSkills.includes(skillId);
             let bgStyle = isActive ? 'background:#000044;' : 'transparent';
             
-            // 【防呆 2】：安全渲染標籤
             let tags = skill.tags || [];
             let tagsHtml = tags.map(t => {
-                let cls = ''; if(t==='寒')cls='ice'; else if(t==='炎')cls='fire'; else if(t==='鈍')cls='blunt'; else if(t==='風')cls='wind'; else if(t==='牽引')cls='pull'; else if(t==='佈置')cls='trap'; else if(t==='絲線')cls='silk'; else if(t==='柔')cls='soft'; else if(t==='Aura')cls='aura';
+                let cls = ''; 
+                // 支援五大行與舊有標籤的顏色映射
+                if(['寒','冰'].includes(t)) cls='ice'; 
+                else if(['炎','火'].includes(t)) cls='fire'; 
+                else if(['勢','發勁','鈍','銳','剛'].includes(t)) cls='blunt'; 
+                else if(['道','激發','風','雷'].includes(t)) cls='wind'; 
+                else if(['策','謀定','牽引','識破'].includes(t)) cls='pull'; 
+                else if(['佈置','機','術','毒'].includes(t)) cls='trap'; 
+                else if(['絲線','針'].includes(t)) cls='silk'; 
+                else if(['念','運氣','柔','空','化'].includes(t)) cls='soft'; 
+                else if(['音','共鳴','歌','曲','Aura','狂'].includes(t)) cls='aura';
                 return `<span class="tag ${cls}">${t}</span>`;
             }).join('');
 
-            // 【防呆 3】：相容 msg 與 desc，並給予數值預設值
             let description = skill.desc || skill.msg || '無詳細說明';
             let cost = skill.comboCost || 0;
             let pwr = skill.power || 0;

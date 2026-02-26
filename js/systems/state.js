@@ -93,7 +93,7 @@ export const StatEngine = {
             // 空之境界 (二階段終極狀態)
             if (entity.aura['空之境界']) { ext.comboMax += 500; ext.hit += 200; ext.pAtk += 100; ext.atbSpd += 50; }
         }
-        return {
+return {
             pAtk: Math.max(0, Math.floor(brawn * 2 + agi * 0.75 + dex * 0.75) + ext.pAtk),
             qAtk: Math.max(0, Math.floor(qiPot * 2 + qiCap * 1.5) + ext.qAtk),
             hit: Math.max(0, Math.floor(per * 2 + dex * 1.5) + ext.hit),
@@ -101,8 +101,9 @@ export const StatEngine = {
             critMult: 1.5 + (luck * 2 + brawn * 1.5) / 100,
             dodge: Math.max(0, Math.floor(agi * 2 + per * 1.5) + ext.dodge),
             fixDef: Math.max(0, Math.floor(physique * 2 + brawn * 1.5) + ext.fixDef),
-            pctDef: Math.min(80, Math.max(0, Math.floor((qiCap * 2 + physique * 1.5) / 10) + ext.pctDef)), // 最高減傷 80%
-            comboMax: Math.max(0, Math.floor(dex * 2 + agi * 1.5) + ext.comboMax),
+            pctDef: Math.min(80, Math.max(0, Math.floor((qiCap * 2 + physique * 1.5) / 10) + ext.pctDef)), 
+            // 【修改】：氣力上限改為 30 + (原計算方法的一半)
+            comboMax: 30 + Math.floor(Math.max(0, Math.floor(dex * 2 + agi * 1.5) + ext.comboMax) / 2),
             atbSpd: Math.max(5, Math.floor(agi * 2 + qiCap * 1.5))
         };
     }

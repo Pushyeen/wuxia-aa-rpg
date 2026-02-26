@@ -198,5 +198,213 @@ export const DB_REACTIONS = [
             log(`💀 【直死魔眼】這就是，事物的死。造成 ${trueDmg} 點真實傷害！`, "dmg-msg"); 
             return 2.0; 
         } 
-    }
+    },
+    // ==========================================
+    // 【勢】系連鎖：霸王卸甲 (大招倍率爆發)
+    // ==========================================
+    { 
+        id: "overlord_ult", 
+        name: "霸王卸甲", 
+        // 條件：招式帶有 [卸甲] 標籤，且施放時有成功暫存到層數
+        condition: (tags, t, env, attacker) => tags.includes("卸甲") && (attacker.tempUltStacks || 0) > 0, 
+        execute: (t, p, e, log) => { 
+            let stacks = p.tempUltStacks;
+            p.tempUltStacks = 0; // 讀取後清空暫存
+            
+            // 核心公式：每 1 層霸意/霸體，增加 80% 最終傷害
+            let mult = 1.0 + (stacks * 0.8); 
+            let msg = `💥 【霸王萬鈞】重劍爆發出 ${mult.toFixed(1)} 倍的毀滅性力量！`;
+            
+            // 境界突破：若消耗超過 3 層，附帶空間震盪的真實傷害
+            if (stacks >= 3) {
+                let trueDmg = Math.floor(t.maxHp * 0.15); // 敵方最大生命值 15% 的真傷
+                t.hp -= trueDmg;
+                msg += `\n🩸 極致的力量引發空間震盪，額外造成 ${trueDmg} 點真實傷害！`;
+            }
+            
+            log(msg, "dmg-msg"); 
+            return mult; // 將計算出的超高倍率回傳給戰鬥引擎
+        } 
+    },
+    // ==========================================
+    // 【道】系連鎖：機關殉爆與兩儀核爆
+    // ==========================================
+    
+    { 
+        id: "mech_explode", 
+        name: "萬機殉爆", 
+        // 觸發條件：招式有 [爆破] 標籤，且場上還有殘餘的機關暗器
+        condition: (tags, t, env) => tags.includes("爆破") && (env.needles > 0), 
+        execute: (t, p, e, log) => { 
+            let count = e.needles;
+            let dmg = count * 150; // 每根暗器轉化為 150 真實傷害
+            e.needles = 0; // 清空暗器
+            t.hp -= dmg;
+            log(`💥 【萬機殉爆】天雷引爆了場上 ${count} 個暗器，造成 ${dmg} 點真實機關傷害！`, "dmg-msg"); 
+            return 1.0; 
+        } 
+    },
+
+    { 
+        id: "ice_fire_blast", 
+        name: "冰火兩儀爆", 
+        // 觸發條件：招式有 [爆破] 標籤，且目標/場上同時存在 冰 與 火
+        condition: (tags, t, env) => tags.includes("爆破") && 
+                                   (t.tags['fire'] > 0 || env.fire > 0) && 
+                                   (t.tags['ice'] > 0 || env.ice_cone > 0), 
+        execute: (t, p, e, log) => { 
+            // 結算所有的冰火層數
+            let fireStacks = (t.tags['fire'] || 0) + (e.fire || 0);
+            let iceStacks = (t.tags['ice'] || 0) + (e.ice_cone || 0);
+            
+            t.tags['fire'] = 0; t.tags['ice'] = 0;
+            e.fire = 0; e.ice_cone = 0;
+            
+            // 毀滅性公式：敵方最大生命值 30% + 層數加成的真實傷害
+            let baseDmg = Math.floor(t.maxHp * 0.3); 
+            let extraDmg = (fireStacks + iceStacks) * 50;
+            let totalDmg = baseDmg + extraDmg;
+            
+            t.hp -= totalDmg;
+            log(`☢️ 【冰火兩儀爆】極寒與極熱劇烈衝突！瞬間蒸發了目標 ${totalDmg} 點生命值！`, "warn-msg"); 
+            
+            // 可以加入震動效果
+            if (document.getElementById('combat-window')) {
+                document.getElementById('combat-window').classList.add('shake-effect');
+                setTimeout(() => document.getElementById('combat-window').classList.remove('shake-effect'), 400);
+            }
+            return 1.5; // 大招本身的基礎傷害再乘以 1.5 倍
+        } 
+    },
+    // ==========================================
+    // 【念】系連鎖：萬佛朝宗 與 怒火焚城
+    // ==========================================
+    
+    { 
+        id: "dharma_zen_ult", 
+        name: "萬佛朝宗", 
+        // 條件：招式有 [超渡] 標籤，且施放時暫存了【禪定】層數
+        condition: (tags, t, env, attacker) => tags.includes("超渡") && (attacker.tempZen || 0) > 0, 
+        execute: (t, p, e, log) => { 
+            let stacks = p.tempZen;
+            p.tempZen = 0; 
+            
+            // 基礎效果：清空敵方行動條與氣力值 (徹底打斷敵方節奏)
+            t.wait = 0;
+            t.currentCombo = 0;
+            
+            // 傷害公式：每層禪定附加 10% 自身最大生命值的真實傷害
+            let trueDmg = Math.floor(p.maxHp * 0.1 * stacks);
+            t.hp -= trueDmg;
+            
+            log(`📿 【萬佛朝宗】佛光普照，強行渡化！清空敵方所有行動力，並造成 ${trueDmg} 點真實傷害！`, "dmg-msg"); 
+            return 1.5; // 基礎招式傷害乘以 1.5 倍
+        } 
+    },
+
+    { 
+        id: "dharma_wrath_ult", 
+        name: "怒火焚城", 
+        // 條件：招式有 [超渡] 標籤，且施放時暫存了【怒意】層數
+        condition: (tags, t, env, attacker) => tags.includes("超渡") && (attacker.tempWrath || 0) > 0, 
+        execute: (t, p, e, log) => { 
+            let stacks = p.tempWrath;
+            p.tempWrath = 0; 
+            
+            // 狂戰士效果：將自身「已損失生命值」直接按比例轉化為真實傷害
+            // 層數越高，轉化率越高。1層=50%，2層=100%，3層=150%...
+            let missingHp = Math.max(0, p.maxHp - p.hp);
+            let mult = stacks * 0.5;
+            let trueDmg = Math.floor(missingHp * mult);
+            
+            if (trueDmg > 0) {
+                t.hp -= trueDmg;
+                log(`🌋 【怒火焚城】我不入地獄誰入地獄！燃燒鮮血化為 ${trueDmg} 點毀滅性的真實傷害！`, "warn-msg"); 
+            } else {
+                log(`🌋 【怒火焚城】滿血狀態無法發揮怒火的最大威力...`, "sys-msg"); 
+            }
+            
+            // 畫面劇烈震動
+            let combatWin = document.querySelector('.battle-ui');
+            if (combatWin) {
+                combatWin.classList.add('shake-effect');
+                setTimeout(() => combatWin.classList.remove('shake-effect'), 500);
+            }
+            
+            return 2.0; // 大招本身物理/法術傷害翻倍
+        } 
+    },
+    // ==========================================
+    // 【音】系連鎖：餘音繞樑 (指數爆發)
+    // ==========================================
+    
+    { 
+        id: "echo_resonance_ult", 
+        name: "餘音繞樑", 
+        // 條件：招式有 [共振] 標籤，且目標身上有 [餘音]
+        condition: (tags, t, env, attacker) => tags.includes("共振") && (t.tags['餘音'] > 0), 
+        execute: (t, p, e, log) => { 
+            let echoes = t.tags['餘音'];
+            t.tags['餘音'] = 0; // 引爆後清空
+            
+            // 指數型倍率公式：1.3 的 餘音層數 次方
+            // (例如：5層=3.7倍, 10層=13.7倍, 15層=51倍)
+            let mult = Math.pow(1.3, echoes);
+            
+            // 設置一個安全上限，避免疊太多層導致傷害突破天際 (最高 50 倍)
+            mult = Math.min(50, mult);
+            
+            log(`💥 【餘音繞樑】樂曲達到高潮！${echoes} 層餘音引發了 ${mult.toFixed(1)} 倍的毀滅性音爆！`, "dmg-msg"); 
+            
+            // 畫面劇烈震動特效
+            let combatWin = document.querySelector('.battle-ui');
+            if (combatWin) {
+                combatWin.classList.add('shake-effect');
+                setTimeout(() => combatWin.classList.remove('shake-effect'), 500);
+            }
+            
+            return mult; // 將計算出的極高倍率回傳給戰鬥引擎
+        } 
+    },
+    // ==========================================
+    // 【策】系連鎖：天機看破 (破綻絕對斬殺)
+    // ==========================================
+    
+    { 
+        id: "guigu_execute_ult", 
+        name: "天機看破", 
+        // 條件：招式有 [識破] 標籤，且目標身上有 [死穴]
+        condition: (tags, t, env, attacker) => tags.includes("識破") && (t.tags['死穴'] > 0), 
+        execute: (t, p, e, log) => { 
+            let stacks = t.tags['死穴'];
+            t.tags['死穴'] = 0; // 引爆後清空所有破綻
+            
+            // 計算斬殺線：基礎 15% + (每層 5%)。17層剛好是 100%
+            let thresholdPct = 15 + (stacks * 5); 
+            // 取得敵方目前的血量百分比
+            let currentHpPct = (t.hp / t.maxHp) * 100;
+            
+            if (currentHpPct <= thresholdPct) {
+                // 斬殺成功！
+                t.hp -= 99999;
+                log(`♟️ 【天機看破】斬殺線已達 ${thresholdPct}%！敵方命數已盡，觸發絕對斬殺！`, "warn-msg"); 
+                
+                // 強烈畫面震動演出
+                let combatWin = document.querySelector('.battle-ui');
+                if (combatWin) {
+                    combatWin.classList.add('shake-effect');
+                    setTimeout(() => combatWin.classList.remove('shake-effect'), 600);
+                }
+                return 1.0; 
+                
+            } else {
+                // 斬殺失敗：血量還太多，僅造成懲罰性真實傷害
+                let trueDmg = stacks * 50; // 每層補償 50 點真傷
+                t.hp -= trueDmg;
+                log(`♟️ 【天機看破】斬殺線為 ${thresholdPct}%，但敵方氣血尚旺 (${currentHpPct.toFixed(1)}%)，斬殺失敗！僅造成 ${trueDmg} 點真實傷害。`, "sys-msg"); 
+                
+                return 1.5; // 大招基礎傷害仍可造成 1.5 倍傷害
+            }
+        } 
+    },
 ];
