@@ -266,5 +266,5 @@ export const DB_ENEMIES = {
                 }
             }
         }
-    }
+    },
 };

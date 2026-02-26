@@ -354,5 +354,5 @@ export const DB_SKILLS = {
             // 【修正】：正確呼叫 ctx.log
             ctx.log("「看見了……你的死線！」", "warn-msg");
         }
-    },
+    },  
 };
