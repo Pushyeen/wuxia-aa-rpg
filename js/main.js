@@ -9,7 +9,6 @@ import { CombatSystem } from './systems/combat.js';
 import { Logger } from './ui/logger.js';
 import { SysPanel } from './ui/sys_panel.js';
 import { AvatarUI } from './ui/avatar.js'; 
-// 【修正 1】：引入新版的地圖資料庫 DB_MAPS
 import { DB_MAPS } from './data/db_maps.js';
 
 let mapEngine, vfxEngine;
@@ -26,7 +25,6 @@ function initGame() {
         logger: Logger,
         combat: CombatSystem,
         ui: SysPanel,
-        // 【修正 2】：將 mapEngine 注入依賴中，讓事件系統可以呼叫它來移除地圖上的 NPC
         map: mapEngine 
     };
 
@@ -38,56 +36,7 @@ function initGame() {
     
     mapEngine.updatePlayerPosition(GameState.player.x, GameState.player.y);
     
- // 在 js/main.js 中找到 initGame 函式的最後面
-
-    // ... 前面的初始化程式碼保留 ...
-    SysPanel.render();
-    
-    mapEngine.updatePlayerPosition(GameState.player.x, GameState.player.y);
-    
-    // 【修改】：移除原本直接印 Log 的程式碼，改由事件引擎呼叫開局腳本
     EventEngine.play('evt_start_game');
-}
-// ==========================================
-// 【新增】：將移動邏輯獨立成函式，供鍵盤與虛擬按鍵共用
-// ==========================================
-function movePlayer(dx, dy) {
-    // 只有在探索模式下才能移動
-    if (GameState.current !== "EXPLORE") return;
-    if (dx === 0 && dy === 0) return;
-
-    let p = GameState.player;
-    let nx = p.x + dx, ny = p.y + dy;
-    
-    // 取得當前地圖資料
-    let currentMapId = mapEngine.currentMapId || 'map_start';
-    let mapData = DB_MAPS[currentMapId];
-    
-    // 防呆：防止走出陣列範圍
-    if (!mapData || !mapData.matrix[ny] || !mapData.matrix[ny][nx]) return;
-    
-    // 讀取字串矩陣中的字元，並判斷是否為牆壁
-    let symbolChar = mapData.matrix[ny][nx];
-    let tileData = mapData.symbols[symbolChar];
-    
-    // 如果是牆壁，直接 return 阻擋移動
-    if (tileData && tileData.type === 'wall') return;
-    
-    // 允許移動：更新玩家座標與地圖渲染
-    p.x = nx; 
-    p.y = ny; 
-    mapEngine.updatePlayerPosition(p.x, p.y);
-    
-    // 檢查新座標點上是否有事件
-    let evtId = mapData.events[`${nx},${ny}`];
-    if (evtId) {
-        // 將觸發事件的座標記錄下來 (為了讓腳本知道要移除哪個座標的 NPC)
-        GameState.currentEventX = nx;
-        GameState.currentEventY = ny;
-        
-        // 統一交給 EventEngine 處理
-        EventEngine.play(evtId);
-    }
 }
 
 // ==========================================
@@ -136,7 +85,7 @@ window.addEventListener("keydown", (e) => {
 });
 
 // ==========================================
-// 虛擬方向鍵綁定 (使用 pointerdown 瞬間觸發)
+// 虛擬方向鍵綁定 (強制觸控最高優先級)
 // ==========================================
 function setupVirtualDPad() {
     const btnUp = document.getElementById('dpad-up');
@@ -147,10 +96,15 @@ function setupVirtualDPad() {
     if(!btnUp) return;
 
     const bindMove = (btn, dx, dy) => {
-        // pointerdown 可以同時完美支援滑鼠點擊與手機觸控，且沒有 300ms 延遲
-        btn.addEventListener('pointerdown', (e) => {
-            e.preventDefault(); // 阻止畫面滾動或放大
-            btn.blur(); 
+        // 手機端專用：touchstart 能實現 0 延遲觸發
+        btn.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // 阻擋手機瀏覽器預設的雙擊放大、滑動
+            movePlayer(dx, dy);
+        }, { passive: false });
+        
+        // 電腦端/滑鼠測試用：mousedown
+        btn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
             movePlayer(dx, dy);
         });
     };
@@ -161,10 +115,7 @@ function setupVirtualDPad() {
     bindMove(btnRight, 1, 0);
 }
 
-// ==========================================
-// 遊戲初始化啟動點
-// ==========================================
-// 請確保整份 main.js 只有這裡有一個 window.addEventListener('load')
+// 唯一啟動點
 window.addEventListener('load', () => {
     initGame();
     setupVirtualDPad();

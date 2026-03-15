@@ -530,22 +530,80 @@ body {
     #area-log { height: 20vh; min-height: 150px; order: 2; }
     #area-avatar { order: 3; }
     #area-sys { height: 50vh; min-height: 400px; order: 4; }
+/* ==========================================
+   手機版響應式排版 (Mobile RWD) & 虛擬方向鍵
+   ========================================== */
+#virtual-dpad {
+    display: none; /* 電腦版預設隱藏 */
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 99999; /* 絕對置頂，保證不被特效層遮擋 */
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    opacity: 0.85;
+    touch-action: none; /* 徹底封鎖瀏覽器手勢，讓 JS 100% 接管觸控 */
+    pointer-events: auto;
+}
 
-/* 虛擬方向鍵：改為浮動在畫面上方，不受滑動影響 */
-    #virtual-dpad {
-        display: flex;
-        position: fixed;
-        bottom: 15px;
-        right: 15px;
-        z-index: 10000; /* 確保大於 vfx-layer 的 9999 */
-        opacity: 0.75;
-        transform: scale(0.9);
-        touch-action: none; /* 徹底封殺瀏覽器預設的觸控行為 */
+.dpad-middle { display: flex; gap: 8px; }
+
+.dpad-btn {
+    width: 60px;
+    height: 60px;
+    background: rgba(17, 17, 17, 0.9);
+    border: 3px outset #888;
+    color: #ddd;
+    font-size: 24px;
+    font-weight: bold;
+    font-family: 'PMingLiU', 'MingLiU', monospace;
+    cursor: pointer;
+    border-radius: 10px;
+    
+    /* 防呆與防 iOS 長按選單 */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none; 
+}
+
+.dpad-btn:active {
+    border: 3px inset #888;
+    background: #0000aa;
+    color: #fff;
+}
+
+/* 當螢幕為手機或平板時自動啟用單欄直式排版 */
+@media screen and (max-width: 900px) {
+    body {
+        height: auto;
+        min-height: 100vh;
+        overflow: auto;
+        background-attachment: fixed;
     }
 
-    /* 確保彈出視窗在手機上不會破版 */
+    #game-master-container {
+        display: flex;
+        flex-direction: column;
+        height: auto;
+        padding: 5px;
+        border: none;
+        gap: 8px;
+    }
+
+    /* 重新排序手機上的顯示層級：地圖最上面，接著是日誌、立繪、系統區 */
+    #area-map { height: 45vh; min-height: 320px; order: 1; }
+    #area-log { height: 20vh; min-height: 150px; order: 2; }
+    #area-avatar { order: 3; }
+    #area-sys { height: 50vh; min-height: 400px; order: 4; }
+
+    #virtual-dpad {
+        display: flex; /* 在手機端顯現 */
+    }
+
     .draggable-window {
         max-width: 95vw !important;
-        left: 2.5vw !important; /* 強制置中 */
+        left: 2.5vw !important;
     }
+}
 }
