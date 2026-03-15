@@ -338,6 +338,7 @@ const TabTrain = {
     }
 };
 // ====== 新增：攻略分頁模組 ======
+// ====== 更新：擴充版攻略分頁模組 ======
 const TabGuide = {
     currentLang: 'zh', // 預設顯示中文
     render(p) {
@@ -355,34 +356,46 @@ const TabGuide = {
 
         if (isZh) {
             html += `
-                <h3 style="color:#ffff55; margin-top:0;">🕹️ 基礎操作</h3>
-                <p>使用 <b>W, A, S, D</b> 或 <b>虛擬方向鍵</b> 在地圖上移動。接觸地圖上的事件符號（如：匠、惡、護等）即可觸發對話或進入戰鬥。</p>
-                <h3 style="color:#ffff55;">⚔️ 戰鬥機制</h3>
-                <p>本作採用半即時制（ATB）。行動條滿 100 時進入你的回合。</p>
-                <p><b>氣力值 (Combo)</b>：出招需要消耗氣力。如果氣力不足卻強制出招，極高機率會產生<span style="color:#ff5555;">「破綻」</span>，此時受到敵人攻擊將承受 <b>1.5倍</b> 爆擊傷害！</p>
+                <h3 style="color:#ffff55; margin-top:0;">🕹️ 基礎操作與戰鬥</h3>
+                <p>使用 <b>W, A, S, D</b> 或 <b>虛擬方向鍵</b> 在地圖上移動。接觸地圖上的事件符號即可觸發劇情或戰鬥。</p>
+                <p><b>氣力值 (Combo)</b>：戰鬥採半即時制。出招需消耗氣力，若氣力不足卻強制出招，極高機率會產生<span style="color:#ff5555;">「破綻」</span>，此時受到攻擊將承受 <b>1.5倍</b> 致命傷害！</p>
+                
+                <h3 style="color:#ffff55;">📜 武學與內功 (武俠文化指南)</h3>
+                <p><b>學習與配置武功</b>：在江湖中獲得秘笈後，少俠會自動學會對應的武功。但請注意，必須進入「外功」面板將招式<b>【配置】</b>為參戰狀態，才能在戰鬥中使用。合理搭配不同流派的招式是克敵制勝的關鍵。</p>
+                <p><b>修練內力 (周天運轉)</b>：內功是武俠的根基。進入「內功」面板，消耗戰鬥獲得的「修為(Exp)」來進行<b>【衝穴】</b>，打通經脈以永久提升基礎屬性。將內功設為<b>【運轉】</b>狀態，更能獲得強大的被動加成與獨特護體效果。</p>
+                
+                <h3 style="color:#ffff55;">✨ AA 戰鬥演出的魅力</h3>
+                <p>本作採用復古的 Ascii Art (AA) 純文字字元來拼湊畫面，但戰鬥絕不含糊！少俠與敵人的立繪會隨著裝備的武器改變姿態，並在攻擊、受擊時產生動態位移。結合華麗的字元粒子特效 (VFX) 與震屏打擊感，請盡情發揮您的想像力，在腦海中補完刀光劍影的純粹浪漫！</p>
+                
                 <h3 style="color:#ffff55;">☯️ 五大武學流派</h3>
                 <ul style="padding-left: 20px; margin-bottom: 20px;">
-                    <li style="margin-bottom:6px;"><span style="color:#ffaa55; font-weight:bold;">【勢】(剛猛爆發)</span>：大開大闔的物理流派。累積「霸意」打出無視防禦的極致爆發傷害。</li>
-                    <li style="margin-bottom:6px;"><span style="color:#55ffff; font-weight:bold;">【道】(陣法機關)</span>：不直接攻擊，而是在場上佈置暗器、火種、冰錐，並利用法術引發全螢幕的連鎖核爆。</li>
-                    <li style="margin-bottom:6px;"><span style="color:#ff55ff; font-weight:bold;">【念】(防守反擊)</span>：透過「化勁」無傷接招並吸血，殘血時能將防禦轉為「怒意」，把失去的血量轉化為真實傷害反殺。</li>
-                    <li style="margin-bottom:6px;"><span style="color:#55ff55; font-weight:bold;">【音】(極致連段)</span>：利用「霓裳」絕對閃避，並在敵人身上瘋狂疊加「餘音」，最後引爆產生指數級別的毀滅音爆。</li>
-                    <li><span style="color:#aaaaaa; font-weight:bold;">【策】(控場斬殺)</span>：操弄敵我行動條（ATB），在敵人身上佈下「死穴」。只要敵人血量低於斬殺線，就能觸發「天機看破」一擊必殺！</li>
+                    <li style="margin-bottom:6px;"><span style="color:#ffaa55; font-weight:bold;">【勢】(剛猛爆發)</span>：大開大闔的物理流派。累積「霸意」打出無視防禦的極致爆發。</li>
+                    <li style="margin-bottom:6px;"><span style="color:#55ffff; font-weight:bold;">【道】(陣法機關)</span>：在場上佈置暗器、火種、冰錐，並利用法術引發全螢幕連鎖核爆。</li>
+                    <li style="margin-bottom:6px;"><span style="color:#ff55ff; font-weight:bold;">【念】(防守反擊)</span>：透過「化勁」無傷接招吸血，殘血時能將防禦轉為「怒意」造成真實傷害反殺。</li>
+                    <li style="margin-bottom:6px;"><span style="color:#55ff55; font-weight:bold;">【音】(極致連段)</span>：利用「霓裳」絕對閃避，在敵人身上疊加「餘音」，引爆產生指數級音爆。</li>
+                    <li><span style="color:#aaaaaa; font-weight:bold;">【策】(控場斬殺)</span>：操弄行動條（ATB），佈下「死穴」。敵人血量低於斬殺線即觸發「天機看破」秒殺。</li>
                 </ul>
             `;
         } else {
             html += `
-                <h3 style="color:#ffff55; margin-top:0;">🕹️ 基本操作</h3>
-                <p><b>W, A, S, D</b> または <b>方向キー</b> でマップ上を移動します。マップ上のシンボル（匠、悪など）に触れるとイベントや戦闘が始まります。</p>
-                <h3 style="color:#ffff55;">⚔️ 戦闘システム</h3>
-                <p>本作はアクティブタイムバトル（ATB）を採用しています。行動ゲージが100になると自分のターンになります。</p>
-                <p><b>気力 (コンボコスト)</b>：技を出すと気力を消費します。気力が足りない状態で無理に技を出すと<span style="color:#ff5555;">「破綻（隙）」</span>が生じやすく、敵から受けるダメージが <b>1.5倍</b> になってしまいます！</p>
+                <h3 style="color:#ffff55; margin-top:0;">🕹️ 基本操作と戦闘</h3>
+                <p><b>W, A, S, D</b> または <b>方向キー</b> で移動します。マップ上のシンボルに触れるとイベントや戦闘が始まります。</p>
+                <p><b>気力 (コンボコスト)</b>：戦闘は半リアルタイム制（ATB）です。技を出すと気力を消費します。気力不足で無理に技を出すと<span style="color:#ff5555;">「破綻（隙）」</span>が生じやすく、受けるダメージが <b>1.5倍</b> になってしまいます！</p>
+                
+                <h3 style="color:#ffff55;">📜 武学と内功（武侠カルチャーガイド）</h3>
+                <p><b>外功（技）の習得とセット</b>：「秘伝書」を獲得すると技を覚えます。ただし、戦闘で使うには「外功」タブで技を<b>【配置（セット）】</b>して「参戦」状態にする必要があります。状況に応じて技の組み合わせを変えるのが勝利の鍵です。</p>
+                <p><b>内功の修練（気を練る）</b>：内功（気功）は武侠の基礎です。「内功」タブでは、戦闘で得た「修為（経験値）」を消費して<b>【衝穴（ツボを開く）】</b>を行い、経絡を繋ぐことで基礎ステータスが永久に上昇します。さらに内功を<b>【運転（アクティブ）】</b>状態にすると、強力なパッシブ効果やバフを得られます。</p>
+                
+                <h3 style="color:#ffff55;">✨ AA（アスキーアート）バトルの魅力</h3>
+                <p>本作はレトロなアスキーアート（AA）でグラフィックを表現していますが、戦闘は非常にダイナミックです！装備した武器によってAAの構えが変化し、攻撃やダメージを受けるとキャラクターが滑らかに動きます。文字の形をした華麗なパーティクルエフェクト（VFX）や画面の振動効果と合わさることで、プレイヤーの想像力を掻き立てる純粋でロマンチックな武侠アクションを体験できます！</p>
+                
                 <h3 style="color:#ffff55;">☯️ 五大武学流派</h3>
                 <ul style="padding-left: 20px; margin-bottom: 20px;">
-                    <li style="margin-bottom:6px;"><span style="color:#ffaa55; font-weight:bold;">【勢】(物理/剛)</span>：強力な物理アタッカー。「霸意」を消費して防御無視の大ダメージを叩き出します。</li>
+                    <li style="margin-bottom:6px;"><span style="color:#ffaa55; font-weight:bold;">【勢】(物理/剛)</span>：「霸意」を消費して防御無視の大ダメージを叩き出します。</li>
                     <li style="margin-bottom:6px;"><span style="color:#55ffff; font-weight:bold;">【道】(魔法/陣)</span>：罠（暗器、火種、氷柱）を設置し、術で起爆させて画面全体に連鎖的な大爆発を起こします。</li>
                     <li style="margin-bottom:6px;"><span style="color:#ff55ff; font-weight:bold;">【念】(防御/反撃)</span>：攻撃を無効化しつつHPを吸収。ピンチになると「怒意」に変わり、失ったHPを固定ダメージに変換して逆襲します。</li>
-                    <li style="margin-bottom:6px;"><span style="color:#55ff55; font-weight:bold;">【音】(回避/連撃)</span>：絶対回避。「余音（残響）」のデバフを敵に重ね、最後に起爆させて指数関数的な超ダメージを与えます。</li>
-                    <li><span style="color:#aaaaaa; font-weight:bold;">【策】(妨害/即死)</span>：敵の行動ゲージ(ATB)を奪い、「死穴」を重ねます。敵のHPが一定ラインを下回ると「天機看破」で絶対即死（斬殺）させます！</li>
+                    <li style="margin-bottom:6px;"><span style="color:#55ff55; font-weight:bold;">【音】(回避/連撃)</span>：絶対回避。「余音（残響）」のデバフを重ね、起爆させて指数関数的な超ダメージを与えます。</li>
+                    <li><span style="color:#aaaaaa; font-weight:bold;">【策】(妨害/即死)</span>：行動ゲージ(ATB)を奪い、「死穴」を重ねます。敵のHPが一定ラインを下回ると「天機看破」で絶対即死（斬殺）させます！</li>
                 </ul>
             `;
         }
