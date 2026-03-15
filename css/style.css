@@ -503,9 +503,48 @@ body {
     color: #fff;
 }
 
-/* 當螢幕寬度小於 900px 時自動顯示虛擬方向鍵 */
+/* ==========================================
+   手機版響應式排版 (Mobile RWD) & 虛擬方向鍵
+   ========================================== */
 @media screen and (max-width: 900px) {
+    /* 解除全螢幕鎖定，允許手機上下滑動 */
+    body {
+        height: auto;
+        min-height: 100vh;
+        overflow: auto;
+        background-attachment: fixed; /* 讓背景的復古網點固定不動 */
+    }
+
+    /* 將主容器改為垂直排列 (Flexbox) */
+    #game-master-container {
+        display: flex;
+        flex-direction: column;
+        height: auto;
+        padding: 5px;
+        border: none; /* 手機螢幕寸土寸金，移除厚重外框 */
+        gap: 8px;
+    }
+
+    /* 重新排序與設定各面板高度，讓戰鬥與探索體驗更順暢 */
+    #area-map { height: 45vh; min-height: 320px; order: 1; }
+    #area-log { height: 20vh; min-height: 150px; order: 2; }
+    #area-avatar { order: 3; }
+    #area-sys { height: 50vh; min-height: 400px; order: 4; }
+
+    /* 虛擬方向鍵：改為浮動在畫面上方，不受滑動影響 */
     #virtual-dpad {
         display: flex;
+        position: fixed;
+        bottom: 15px;
+        right: 15px;
+        z-index: 9999;
+        opacity: 0.75;
+        transform: scale(0.9); /* 稍微縮小，避免擋住太多畫面 */
+    }
+
+    /* 確保彈出視窗在手機上不會破版 */
+    .draggable-window {
+        max-width: 95vw !important;
+        left: 2.5vw !important; /* 強制置中 */
     }
 }

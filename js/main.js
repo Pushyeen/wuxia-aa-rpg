@@ -102,7 +102,7 @@ window.addEventListener("keydown", (e) => {
 });
 
 // ==========================================
-// 【新增】：綁定虛擬方向鍵事件
+// 綁定虛擬方向鍵事件 (修正手機端無反應問題)
 // ==========================================
 function setupVirtualDPad() {
     const btnUp = document.getElementById('dpad-up');
@@ -112,15 +112,13 @@ function setupVirtualDPad() {
 
     if(!btnUp) return;
 
-    // 建立綁定函式，支援手機 touchstart 與滑鼠 mousedown
+    // 改用單純的 click 事件，搭配 CSS 的 touch-action 即可完美支援手機點擊
     const bindMove = (btn, dx, dy) => {
-        const handler = (e) => {
-            e.preventDefault(); // 防止觸發預設行為干擾
+        btn.addEventListener('click', (e) => {
+            // 取消焦點，避免點擊後按鈕一直處於 active 狀態
+            btn.blur(); 
             movePlayer(dx, dy);
-        };
-        // passive: false 確保 e.preventDefault() 生效
-        btn.addEventListener('touchstart', handler, { passive: false }); 
-        btn.addEventListener('mousedown', handler);
+        });
     };
 
     bindMove(btnUp, 0, -1);
