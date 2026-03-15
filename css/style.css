@@ -531,15 +531,16 @@ body {
     #area-avatar { order: 3; }
     #area-sys { height: 50vh; min-height: 400px; order: 4; }
 
-    /* 虛擬方向鍵：改為浮動在畫面上方，不受滑動影響 */
+/* 虛擬方向鍵：改為浮動在畫面上方，不受滑動影響 */
     #virtual-dpad {
         display: flex;
         position: fixed;
         bottom: 15px;
         right: 15px;
-        z-index: 9999;
+        z-index: 10000; /* 確保大於 vfx-layer 的 9999 */
         opacity: 0.75;
-        transform: scale(0.9); /* 稍微縮小，避免擋住太多畫面 */
+        transform: scale(0.9);
+        touch-action: none; /* 徹底封殺瀏覽器預設的觸控行為 */
     }
 
     /* 確保彈出視窗在手機上不會破版 */

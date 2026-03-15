@@ -90,7 +90,41 @@ function movePlayer(dx, dy) {
     }
 }
 
+// ==========================================
+// 共用移動邏輯
+// ==========================================
+function movePlayer(dx, dy) {
+    if (GameState.current !== "EXPLORE") return;
+    if (dx === 0 && dy === 0) return;
+
+    let p = GameState.player;
+    let nx = p.x + dx, ny = p.y + dy;
+    
+    let currentMapId = mapEngine.currentMapId || 'map_start';
+    let mapData = DB_MAPS[currentMapId];
+    
+    if (!mapData || !mapData.matrix[ny] || !mapData.matrix[ny][nx]) return;
+    
+    let symbolChar = mapData.matrix[ny][nx];
+    let tileData = mapData.symbols[symbolChar];
+    
+    if (tileData && tileData.type === 'wall') return;
+    
+    p.x = nx; 
+    p.y = ny; 
+    mapEngine.updatePlayerPosition(p.x, p.y);
+    
+    let evtId = mapData.events[`${nx},${ny}`];
+    if (evtId) {
+        GameState.currentEventX = nx;
+        GameState.currentEventY = ny;
+        EventEngine.play(evtId);
+    }
+}
+
+// ==========================================
 // 實體鍵盤綁定
+// ==========================================
 window.addEventListener("keydown", (e) => {
     let dx = 0, dy = 0;
     if(["w","ArrowUp"].includes(e.key.toLowerCase())) dy = -1;
@@ -102,7 +136,7 @@ window.addEventListener("keydown", (e) => {
 });
 
 // ==========================================
-// 綁定虛擬方向鍵事件 (修正手機端無反應問題)
+// 虛擬方向鍵綁定 (使用 pointerdown 瞬間觸發)
 // ==========================================
 function setupVirtualDPad() {
     const btnUp = document.getElementById('dpad-up');
@@ -112,10 +146,10 @@ function setupVirtualDPad() {
 
     if(!btnUp) return;
 
-    // 改用單純的 click 事件，搭配 CSS 的 touch-action 即可完美支援手機點擊
     const bindMove = (btn, dx, dy) => {
-        btn.addEventListener('click', (e) => {
-            // 取消焦點，避免點擊後按鈕一直處於 active 狀態
+        // pointerdown 可以同時完美支援滑鼠點擊與手機觸控，且沒有 300ms 延遲
+        btn.addEventListener('pointerdown', (e) => {
+            e.preventDefault(); // 阻止畫面滾動或放大
             btn.blur(); 
             movePlayer(dx, dy);
         });
@@ -127,8 +161,11 @@ function setupVirtualDPad() {
     bindMove(btnRight, 1, 0);
 }
 
-// 初始化遊戲
+// ==========================================
+// 遊戲初始化啟動點
+// ==========================================
+// 請確保整份 main.js 只有這裡有一個 window.addEventListener('load')
 window.addEventListener('load', () => {
     initGame();
-    setupVirtualDPad(); // 初始化時一併綁定虛擬按鍵
+    setupVirtualDPad();
 });
