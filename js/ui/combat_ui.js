@@ -6,6 +6,8 @@ import { DB_SKILLS } from '../data/db_skills.js';
 
 export const CombatUI = {
     createWindow(eData) {
+        const modeNames = { 'manual': '手動', 'auto_rand': '自動(隨機)', 'auto_safe': '自動(穩健)', 'auto_aggro': '自動(狂攻)' };
+        let currentModeText = modeNames[GameState.player.combatMode] || '手動';
         let html = `
             <div style="width: 600px; max-width: 100%; position: relative;"> 
                 

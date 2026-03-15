@@ -456,3 +456,56 @@ body {
     0% { filter: brightness(1) drop-shadow(0 0 5px #ff00ff); }
     100% { filter: brightness(1.6) drop-shadow(0 0 15px #ffffff); }
 }
+/* ==========================================
+   虛擬方向鍵 (Virtual D-Pad)
+   ========================================== */
+#virtual-dpad {
+    display: none; /* 預設隱藏 */
+    position: absolute;
+    bottom: 30px;
+    right: 30px;
+    z-index: 9999;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    opacity: 0.6; /* 半透明以防遮擋過多畫面 */
+    transition: opacity 0.3s;
+}
+
+#virtual-dpad:hover {
+    opacity: 1;
+}
+
+.dpad-middle {
+    display: flex;
+    gap: 5px;
+}
+
+.dpad-btn {
+    width: 55px;
+    height: 55px;
+    background: #111;
+    border: 3px outset #888;
+    color: #ddd;
+    font-size: 20px;
+    font-weight: bold;
+    font-family: 'PMingLiU', 'MingLiU', monospace;
+    cursor: pointer;
+    border-radius: 8px;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation; /* 防止手機點擊時產生畫面縮放 */
+}
+
+.dpad-btn:active {
+    border: 3px inset #888;
+    background: #0000aa; /* 點擊時顯示 DOS 藍 */
+    color: #fff;
+}
+
+/* 當螢幕寬度小於 900px 時自動顯示虛擬方向鍵 */
+@media screen and (max-width: 900px) {
+    #virtual-dpad {
+        display: flex;
+    }
+}

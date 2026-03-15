@@ -144,7 +144,15 @@ export const DB_ENEMIES = {
     'e_elite_wunan': {
         name: "狂海霸拳·武男",
         hp: 9500, maxHp: 9500,
-        // ... (aa 與 stats 基礎數值保持不變) ...
+        aa: `
+            ____
+          /( oo )\\
+         /  (--)  \\
+        /|  |__|  |\\
+       ( (  |  |  ) )
+        \\ \\/    \\/ /
+         \\__|__|__/
+        `,
         stats: {
             brawn: 60, physique: 40, qiCap: 30, qiPot: 50, agi: 25, dex: 25, per: 20, comp: 10, luck: 5,
             equips: {}, 

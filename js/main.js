@@ -48,51 +48,89 @@ function initGame() {
     // 【修改】：移除原本直接印 Log 的程式碼，改由事件引擎呼叫開局腳本
     EventEngine.play('evt_start_game');
 }
-
-window.addEventListener("keydown", (e) => {
+// ==========================================
+// 【新增】：將移動邏輯獨立成函式，供鍵盤與虛擬按鍵共用
+// ==========================================
+function movePlayer(dx, dy) {
     // 只有在探索模式下才能移動
     if (GameState.current !== "EXPLORE") return;
+    if (dx === 0 && dy === 0) return;
 
     let p = GameState.player;
+    let nx = p.x + dx, ny = p.y + dy;
+    
+    // 取得當前地圖資料
+    let currentMapId = mapEngine.currentMapId || 'map_start';
+    let mapData = DB_MAPS[currentMapId];
+    
+    // 防呆：防止走出陣列範圍
+    if (!mapData || !mapData.matrix[ny] || !mapData.matrix[ny][nx]) return;
+    
+    // 讀取字串矩陣中的字元，並判斷是否為牆壁
+    let symbolChar = mapData.matrix[ny][nx];
+    let tileData = mapData.symbols[symbolChar];
+    
+    // 如果是牆壁，直接 return 阻擋移動
+    if (tileData && tileData.type === 'wall') return;
+    
+    // 允許移動：更新玩家座標與地圖渲染
+    p.x = nx; 
+    p.y = ny; 
+    mapEngine.updatePlayerPosition(p.x, p.y);
+    
+    // 檢查新座標點上是否有事件
+    let evtId = mapData.events[`${nx},${ny}`];
+    if (evtId) {
+        // 將觸發事件的座標記錄下來 (為了讓腳本知道要移除哪個座標的 NPC)
+        GameState.currentEventX = nx;
+        GameState.currentEventY = ny;
+        
+        // 統一交給 EventEngine 處理
+        EventEngine.play(evtId);
+    }
+}
+
+// 實體鍵盤綁定
+window.addEventListener("keydown", (e) => {
     let dx = 0, dy = 0;
     if(["w","ArrowUp"].includes(e.key.toLowerCase())) dy = -1;
     if(["s","ArrowDown"].includes(e.key.toLowerCase())) dy = 1;
     if(["a","ArrowLeft"].includes(e.key.toLowerCase())) dx = -1;
     if(["d","ArrowRight"].includes(e.key.toLowerCase())) dx = 1;
 
-    if (dx !== 0 || dy !== 0) {
-        let nx = p.x + dx, ny = p.y + dy;
-        
-        // 取得當前地圖資料
-        let currentMapId = mapEngine.currentMapId || 'map_start';
-        let mapData = DB_MAPS[currentMapId];
-        
-        // 防呆：防止走出陣列範圍
-        if (!mapData || !mapData.matrix[ny] || !mapData.matrix[ny][nx]) return;
-        
-        // 【修正 3】：讀取字串矩陣中的字元，並判斷是否為牆壁(樹木)
-        let symbolChar = mapData.matrix[ny][nx];
-        let tileData = mapData.symbols[symbolChar];
-        
-        // 如果是牆壁，直接 return 阻擋移動
-        if (tileData && tileData.type === 'wall') return;
-        
-        // 允許移動：更新玩家座標與地圖渲染
-        p.x = nx; 
-        p.y = ny; 
-        mapEngine.updatePlayerPosition(p.x, p.y);
-        
-        // 【修正 4】：檢查新座標點上是否有事件
-        let evtId = mapData.events[`${nx},${ny}`];
-        if (evtId) {
-            // 將觸發事件的座標記錄下來 (為了讓腳本知道要移除哪個座標的 NPC)
-            GameState.currentEventX = nx;
-            GameState.currentEventY = ny;
-            
-            // 統一交給 EventEngine 處理 (包含戰鬥、對話、給道具等，因為我們已將戰鬥寫入 db_scripts.js 中)
-            EventEngine.play(evtId);
-        }
-    }
+    movePlayer(dx, dy);
 });
 
-window.addEventListener('load', initGame);
+// ==========================================
+// 【新增】：綁定虛擬方向鍵事件
+// ==========================================
+function setupVirtualDPad() {
+    const btnUp = document.getElementById('dpad-up');
+    const btnDown = document.getElementById('dpad-down');
+    const btnLeft = document.getElementById('dpad-left');
+    const btnRight = document.getElementById('dpad-right');
+
+    if(!btnUp) return;
+
+    // 建立綁定函式，支援手機 touchstart 與滑鼠 mousedown
+    const bindMove = (btn, dx, dy) => {
+        const handler = (e) => {
+            e.preventDefault(); // 防止觸發預設行為干擾
+            movePlayer(dx, dy);
+        };
+        // passive: false 確保 e.preventDefault() 生效
+        btn.addEventListener('touchstart', handler, { passive: false }); 
+        btn.addEventListener('mousedown', handler);
+    };
+
+    bindMove(btnUp, 0, -1);
+    bindMove(btnDown, 0, 1);
+    bindMove(btnLeft, -1, 0);
+    bindMove(btnRight, 1, 0);
+}
+
+// 初始化遊戲
+window.addEventListener('load', () => {
+    initGame();
+    setupVirtualDPad(); // 初始化時一併綁定虛擬按鍵
+});

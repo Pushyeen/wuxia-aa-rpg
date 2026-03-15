@@ -62,10 +62,13 @@ export const CombatSystem = {
 
                 let btnMode = this.win.querySelector('#bat-btn-mode');
                 if (btnMode) {
+                    const modeNames = { 'manual': '手動', 'auto_rand': '自動(隨機)', 'auto_safe': '自動(穩健)', 'auto_aggro': '自動(狂攻)' };
                     btnMode.onclick = () => {
-                        GameState.player.combatMode = (GameState.player.combatMode === 'auto' ? 'manual' : 'auto');
-                        btnMode.innerText = `模式: ${GameState.player.combatMode === 'auto' ? '自動' : '手動'}`;
-                        this.log(`戰鬥模式切換為：${GameState.player.combatMode === 'auto' ? '自動連段' : '手動操控'}`, "sys-msg");
+                        const modes = ['manual', 'auto_rand', 'auto_safe', 'auto_aggro'];
+                        let idx = modes.indexOf(GameState.player.combatMode);
+                        GameState.player.combatMode = modes[(idx + 1) % modes.length]; // 循環切換
+                        btnMode.innerText = `模式: ${modeNames[GameState.player.combatMode]}`;
+                        this.log(`戰鬥模式切換為：${modeNames[GameState.player.combatMode]}`, "sys-msg");
                     };
                 }
             }, 100);
@@ -387,12 +390,60 @@ export const CombatSystem = {
         
         try {
             while (this.playerRef.hp > 0 && this.enemyRef.hp > 0 && !this.battleEnded) {
-                let skills = GameState.player.activeSkills;
-                if (!skills || skills.length === 0) break;
+                let skills = GameState.player.activeSkills.filter(id => DB_SKILLS[id]);
+                if (skills.length === 0) break;
                 
-                let skId = skills[Math.floor(Math.random() * skills.length)];
+                let skId;
+                let mode = GameState.player.combatMode;
+                
+                if (mode === 'auto_safe') {
+                    // 穩健型：只挑選施放後剩餘氣力 >= 50 (0% 破綻率) 的招式
+                    let safeSkills = skills.filter(id => (this.playerRef.currentCombo - DB_SKILLS[id].comboCost >= 50));
+                    if (safeSkills.length > 0) {
+                        skId = safeSkills[Math.floor(Math.random() * safeSkills.length)];
+                    } else {
+                        this.log(`[少俠] 氣力降至警戒線，主動收招轉為守備。`, "sys-msg");
+                        break; // 強制結束連段
+                    }
+                } else if (mode === 'auto_aggro') {
+                    // ==========================================
+                    // 狂攻型 (Aggro)：動態權重評估與隨機暴走
+                    // ==========================================
+                    let scoredSkills = skills.map(id => {
+                        let sk = DB_SKILLS[id];
+                        // 1. 基礎暴力值：威力 + (Hit數權重) + 消耗(高消耗通常較強)
+                        let score = (sk.power || 0) + ((sk.hits || 1) * 20) + (sk.comboCost || 0);
+                        
+                        // 2. 終結技檢定：模擬是否能觸發 DB_REACTIONS (如引爆、斬殺)
+                        let canTrigger = DB_REACTIONS.some(rule => 
+                            rule.condition(sk.tags || [], this.enemyRef, GameState.env, this.playerRef)
+                        );
+                        if (canTrigger) score += 500; // 有大放大！絕對優先！
+
+                        // 3. 疊加印記與佈局檢定：鼓勵 AI 狂上狀態
+                        if (sk.tags && (sk.tags.includes('佈置') || sk.tags.includes('歌') || sk.tags.includes('謀') || sk.tags.includes('術'))) {
+                            score += 80; 
+                        }
+
+                        // 4. 隨機狂暴因子：讓出招不那麼死板 (0~50的浮動值)
+                        score += Math.random() * 50;
+
+                        return { id: id, score: score };
+                    });
+
+                    // 依分數由高至低排序
+                    scoredSkills.sort((a, b) => b.score - a.score);
+                    
+                    // 從最高分的前 2 招中隨機挑選 1 招 (保留瘋狗般的不可預測性)
+                    let topChoices = scoredSkills.slice(0, Math.min(2, scoredSkills.length));
+                    skId = topChoices[Math.floor(Math.random() * topChoices.length)].id;
+                    
+                } else {
+                    // 隨機型
+                    skId = skills[Math.floor(Math.random() * skills.length)];
+                }
+                
                 let skill = DB_SKILLS[skId];
-                if (!skill) break;
                 
                 this.log(`[少俠] 施展 ${skill.name}！`, "story-msg");
                 this.playerRef.turnSkillCount++;
@@ -412,7 +463,8 @@ export const CombatSystem = {
                     this.log(`【破綻】招式銜接失敗！露出 ${this.playerRef.turnSkillCount} 處破綻！`, "warn-msg");
                     break; 
                 } else {
-                    this.log(`⚡ 攻勢連綿不斷！馬上接續下一招！`, "sys-msg");
+                    if (currentAfter < 0) this.log(`⚠️ 強行透支氣力，發動狂暴猛攻！`, "warn-msg");
+                    else this.log(`⚡ 攻勢連綿不斷！馬上接續下一招！`, "sys-msg");
                     await new Promise(r => setTimeout(r, 200)); 
                 }
             }
