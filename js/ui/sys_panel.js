@@ -337,7 +337,67 @@ const TabTrain = {
         });
     }
 };
+// ====== 新增：攻略分頁模組 ======
+const TabGuide = {
+    currentLang: 'zh', // 預設顯示中文
+    render(p) {
+        let isZh = this.currentLang === 'zh';
+        let btnZhStyle = isZh ? 'color:#55ffff; border-bottom:2px solid #55ffff;' : 'color:#888; border-bottom:2px solid transparent;';
+        let btnJpStyle = !isZh ? 'color:#55ffff; border-bottom:2px solid #55ffff;' : 'color:#888; border-bottom:2px solid transparent;';
 
+        let html = `
+        <div style="display:flex; gap:10px; margin-bottom:10px; border-bottom: 1px solid #444; padding-bottom: 5px;">
+            <div class="lang-tab" data-lang="zh" style="cursor:pointer; padding:2px 5px; font-weight:bold; transition:all 0.2s; ${btnZhStyle}">中文攻略</div>
+            <div class="lang-tab" data-lang="jp" style="cursor:pointer; padding:2px 5px; font-weight:bold; transition:all 0.2s; ${btnJpStyle}">日本語ガイド</div>
+        </div>
+        <div style="font-size: 14px; line-height: 1.6; color: #ddd; height: calc(100% - 40px); overflow-y: auto; padding-right: 5px;">
+        `;
+
+        if (isZh) {
+            html += `
+                <h3 style="color:#ffff55; margin-top:0;">🕹️ 基礎操作</h3>
+                <p>使用 <b>W, A, S, D</b> 或 <b>虛擬方向鍵</b> 在地圖上移動。接觸地圖上的事件符號（如：匠、惡、護等）即可觸發對話或進入戰鬥。</p>
+                <h3 style="color:#ffff55;">⚔️ 戰鬥機制</h3>
+                <p>本作採用半即時制（ATB）。行動條滿 100 時進入你的回合。</p>
+                <p><b>氣力值 (Combo)</b>：出招需要消耗氣力。如果氣力不足卻強制出招，極高機率會產生<span style="color:#ff5555;">「破綻」</span>，此時受到敵人攻擊將承受 <b>1.5倍</b> 爆擊傷害！</p>
+                <h3 style="color:#ffff55;">☯️ 五大武學流派</h3>
+                <ul style="padding-left: 20px; margin-bottom: 20px;">
+                    <li style="margin-bottom:6px;"><span style="color:#ffaa55; font-weight:bold;">【勢】(剛猛爆發)</span>：大開大闔的物理流派。累積「霸意」打出無視防禦的極致爆發傷害。</li>
+                    <li style="margin-bottom:6px;"><span style="color:#55ffff; font-weight:bold;">【道】(陣法機關)</span>：不直接攻擊，而是在場上佈置暗器、火種、冰錐，並利用法術引發全螢幕的連鎖核爆。</li>
+                    <li style="margin-bottom:6px;"><span style="color:#ff55ff; font-weight:bold;">【念】(防守反擊)</span>：透過「化勁」無傷接招並吸血，殘血時能將防禦轉為「怒意」，把失去的血量轉化為真實傷害反殺。</li>
+                    <li style="margin-bottom:6px;"><span style="color:#55ff55; font-weight:bold;">【音】(極致連段)</span>：利用「霓裳」絕對閃避，並在敵人身上瘋狂疊加「餘音」，最後引爆產生指數級別的毀滅音爆。</li>
+                    <li><span style="color:#aaaaaa; font-weight:bold;">【策】(控場斬殺)</span>：操弄敵我行動條（ATB），在敵人身上佈下「死穴」。只要敵人血量低於斬殺線，就能觸發「天機看破」一擊必殺！</li>
+                </ul>
+            `;
+        } else {
+            html += `
+                <h3 style="color:#ffff55; margin-top:0;">🕹️ 基本操作</h3>
+                <p><b>W, A, S, D</b> または <b>方向キー</b> でマップ上を移動します。マップ上のシンボル（匠、悪など）に触れるとイベントや戦闘が始まります。</p>
+                <h3 style="color:#ffff55;">⚔️ 戦闘システム</h3>
+                <p>本作はアクティブタイムバトル（ATB）を採用しています。行動ゲージが100になると自分のターンになります。</p>
+                <p><b>気力 (コンボコスト)</b>：技を出すと気力を消費します。気力が足りない状態で無理に技を出すと<span style="color:#ff5555;">「破綻（隙）」</span>が生じやすく、敵から受けるダメージが <b>1.5倍</b> になってしまいます！</p>
+                <h3 style="color:#ffff55;">☯️ 五大武学流派</h3>
+                <ul style="padding-left: 20px; margin-bottom: 20px;">
+                    <li style="margin-bottom:6px;"><span style="color:#ffaa55; font-weight:bold;">【勢】(物理/剛)</span>：強力な物理アタッカー。「霸意」を消費して防御無視の大ダメージを叩き出します。</li>
+                    <li style="margin-bottom:6px;"><span style="color:#55ffff; font-weight:bold;">【道】(魔法/陣)</span>：罠（暗器、火種、氷柱）を設置し、術で起爆させて画面全体に連鎖的な大爆発を起こします。</li>
+                    <li style="margin-bottom:6px;"><span style="color:#ff55ff; font-weight:bold;">【念】(防御/反撃)</span>：攻撃を無効化しつつHPを吸収。ピンチになると「怒意」に変わり、失ったHPを固定ダメージに変換して逆襲します。</li>
+                    <li style="margin-bottom:6px;"><span style="color:#55ff55; font-weight:bold;">【音】(回避/連撃)</span>：絶対回避。「余音（残響）」のデバフを敵に重ね、最後に起爆させて指数関数的な超ダメージを与えます。</li>
+                    <li><span style="color:#aaaaaa; font-weight:bold;">【策】(妨害/即死)</span>：敵の行動ゲージ(ATB)を奪い、「死穴」を重ねます。敵のHPが一定ラインを下回ると「天機看破」で絶対即死（斬殺）させます！</li>
+                </ul>
+            `;
+        }
+        html += `</div>`;
+        return html;
+    },
+    bindEvents(el, panel) {
+        el.querySelectorAll('.lang-tab').forEach(tab => {
+            tab.onclick = () => {
+                this.currentLang = tab.getAttribute('data-lang');
+                panel.render(); // 點擊後重新渲染面板
+            };
+        });
+    }
+};
 // ==========================================
 // 總控面板 (SysPanel Router)
 // ==========================================
@@ -352,7 +412,8 @@ export const SysPanel = {
         'inventory': TabInventory,
         'skill': TabSkill,
         'internal': TabInternal,
-        'train': TabTrain
+        'train': TabTrain,
+        'guide': TabGuide
     },
 
     init(deps) {

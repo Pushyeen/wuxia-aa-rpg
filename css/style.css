@@ -537,7 +537,7 @@ body {
     display: none; /* 電腦版預設隱藏 */
     position: fixed;
     bottom: 20px;
-    right: 20px;
+    left: 20px;
     z-index: 99999; /* 絕對置頂，保證不被特效層遮擋 */
     flex-direction: column;
     align-items: center;
